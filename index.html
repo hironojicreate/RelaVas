@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RelaVas v0.4 - Anchor System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="ui-layer">
+        <p>Tip: 線の端をドラッグして箱に近づけると吸着するの。</p>
+        <p>Tip: 線の中をクリックで関節追加。Shiftドラッグで直角維持。</p>
+    </div>
+
+    <div id="toolbar">
+        <button id="btn-add-node" class="tool-btn" title="人物を追加">＋ 人物</button>
+        <button id="btn-delete" class="tool-btn danger" title="選択した項目を削除">🗑️ 削除</button>
+    </div>
+
+    <div id="canvas-container">
+        <svg id="svg-layer">
+            </svg>
+
+        <div id="snap-guide" class="snap-marker" style="display: none;"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
