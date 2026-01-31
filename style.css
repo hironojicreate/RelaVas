@@ -8,6 +8,7 @@ body, html {
     background-color: #f0f2f5;
     font-family: sans-serif;
     user-select: none; /* テキスト選択防止 */
+    touch-action: none;
 }
 
 #ui-layer {
@@ -108,6 +109,20 @@ body, html {
     cursor: grab;
     z-index: 20;
 }
+
+/* 擬似要素を使って、透明な「持ち手」を広げる魔法 */
+.line-handle::after,
+.waypoint::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px; /* 見た目は10pxだけど、判定は30px！ */
+    height: 30px;
+    transform: translate(-50%, -50%);
+    /* background: rgba(255,0,0,0.2); デバッグ用：赤く表示してみると大きさがわかるよ */
+}
+
 
 /* 吸着ガイド（スナップ候補） */
 .snap-marker {
