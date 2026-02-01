@@ -43,7 +43,10 @@ html {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 1;
+    /* ★変更：ノード(z-index:10)より手前に表示するわ！ */
+    z-index: 12;
+    /* ★重要：これがないと、透明な幕が邪魔してノードが触れなくなっちゃうの */
+    pointer-events: none;
 }
 
 /* 線のスタイル */
@@ -70,6 +73,9 @@ html {
     stroke-width: 15px;
     fill: none;
     cursor: pointer;
+    /* ★重要：SVG全体は無効化したけど、この「線」だけは触れるように復活させるの！ */
+    pointer-events: stroke; 
+    /* ※ブラウザによっては 'visibleStroke' や 'all' の方が安定する場合もあるけど、まずは stroke で */
 }
 
 /* ====== ノード ====== */
@@ -151,7 +157,7 @@ html {
     border-radius: 50%;
     transform: translate(-50%, -50%);
     cursor: grab;
-    z-index: 20;
+    z-index: 200;
 }
 
 .line-handle:hover {
@@ -175,7 +181,7 @@ html {
     border-radius: 50%;
     transform: translate(-50%, -50%);
     cursor: grab;
-    z-index: 20;
+    z-index: 200;
 }
 
 /* 擬似要素を使って、透明な「持ち手」を広げる魔法 */
@@ -214,16 +220,34 @@ html {
 /* ====== ツールバー ====== */
 #toolbar {
     position: absolute;
-    top: 80px;
-    /* ヒントの下 */
-    left: 10px;
+    top: 20px;
+    right: 20px;
+    left: auto; /* 左寄せ指定があれば解除 */
     background: white;
-    padding: 8px;
+    padding: 8px 12px 8px 4px; /* 左側のパディングを減らしてハンドルを詰め込む */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     gap: 8px;
+    align-items: center; /* 上下中央揃え */
     z-index: 100;
+}
+
+/* ★追加：ツールバーのドラッグハンドル */
+#toolbar-drag-handle {
+    cursor: move;
+    color: #bbb;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 0 6px;
+    user-select: none;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+#toolbar-drag-handle:hover {
+    color: #007bff;
 }
 
 .tool-btn {
@@ -249,6 +273,70 @@ html {
 
 .tool-btn:active {
     transform: translateY(0);
+}
+
+/* 無効化されたボタン */
+.tool-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #eee;
+    color: #aaa;
+}
+.tool-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+    background: #eee;
+}
+
+/* ====== ツールバー内の追加スタイル ====== */
+
+/* 区切り線 */
+.tool-separator {
+    width: 1px;
+    height: 24px;
+    background-color: #ddd;
+    margin: 0 4px;
+}
+
+/* グループ化（背景設定など） */
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tool-label {
+    font-size: 11px;
+    color: #666;
+    font-weight: bold;
+    margin-right: 2px;
+}
+
+/* 背景色ピッカーの見た目 */
+#tool-bg-picker {
+    width: 24px;
+    height: 24px;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px; /* ちょっと角丸に */
+}
+
+/* HEX入力欄 */
+#tool-bg-hex {
+    width: 55px;
+    font-size: 11px;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    color: #555;
+    font-family: monospace; /* 等幅フォントで見やすく */
+}
+#tool-bg-hex:focus {
+    border-color: #007bff;
+    outline: none;
 }
 
 /* 削除ボタン（赤系） */
@@ -746,6 +834,20 @@ html {
 .header-action-btn:active {
     transform: translateY(0);
 }
+
+
+/* ====== 順序ボタン（ヘッダーアクションの拡張） ====== */
+
+/* 左側のボタン配置用クラス */
+.header-action-btn.left-btn-1 {
+    right: auto; /* 右寄せ解除 */
+    left: 6px;   /* 左端へ */
+}
+.header-action-btn.left-btn-2 {
+    right: auto;
+    left: 42px;  /* 1つ目の隣へ (6px + 32px + 4px隙間) */
+}
+
 
 /* ====== マルチボックス用追加スタイル ====== */
 

@@ -16,8 +16,24 @@
     </div>
 
     <div id="toolbar">
+        <div id="toolbar-drag-handle" title="ドラッグして移動">⋮⋮</div>
+
         <button id="btn-add-node" class="tool-btn" title="人物を追加">＋ 人物</button>
+        <button id="btn-add-conn" class="tool-btn" title="矢印を追加">＋ 矢印</button>
         <button id="btn-add-box" class="tool-btn" title="ボックスを追加">＋ マルチボックス</button>
+
+        <div class="tool-separator"></div>
+        <div class="tool-group" title="背景色を変更">
+            <span class="tool-label">背景</span>
+            <input type="color" id="tool-bg-picker" value="#f0f2f5">
+            <input type="text" id="tool-bg-hex" value="#f0f2f5" maxlength="7">
+        </div>
+        
+        <div class="tool-separator"></div>
+        <button id="btn-undo" class="tool-btn" title="元に戻す" disabled>↩️</button>
+        <button id="btn-redo" class="tool-btn" title="やり直す" disabled>↪️</button>
+        <div class="tool-separator"></div>
+
         <button id="btn-delete" class="tool-btn danger" title="選択した項目を削除">🗑️ 削除</button>
     </div>
 
@@ -44,6 +60,8 @@
             <div class="handle-bar"></div>
         </div>
 
+        <button id="btn-order-front" class="header-action-btn left-btn-1" title="最前面へ">⬆️</button>
+        <button id="btn-order-back" class="header-action-btn left-btn-2" title="最背面へ">⬇️</button>
         <button id="btn-duplicate" class="header-action-btn" title="複製を作成">❐</button>
         <div class="menu-header">
             <div id="preview-box" class="node-preview">

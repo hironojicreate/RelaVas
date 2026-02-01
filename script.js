@@ -40,6 +40,115 @@ function hexToRgba(hex, opacity100) {
     return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + a + ')';
 }
 
+// 2. ノードデータ
+let nodes = [
+    // 1. リラ（左上）
+    {
+        id: "node-a", x: 380, y: 150, label: "リラ",
+        style: { width: 90, height: 90, backgroundColor: "#ffffff" },
+        text: { x: 45, y: 70 }
+    },
+    // 2. ヴァス（右下）
+    {
+        id: "node-b", x: 680, y: 350, label: "ヴァス",
+        style: { width: 90, height: 90, backgroundColor: "#ffffff" },
+        text: { x: 45, y: 70 }
+    },
+    // 3. リラヴァス（リラの下・ヴァスの左）
+    {
+        id: "node-c", x: 380, y: 350,
+        label: "リラヴァス\n世界を見守る者",
+        style: {
+            width: 100, height: 100,
+            backgroundColor: "#e1bee7",
+            borderColor: '#333333',
+            borderWidth: 2
+        },
+        text: {
+            x: 50, y: 50,
+            color: '#333333',
+            fontSize: 14
+        }
+    },
+
+
+    // 4. チュートリアル説明書（※タイトルより先に描画＝下に敷く）
+    {
+        id: "tutorial-box",
+        type: 'box',
+        x: 350, y: 500,
+        label: "【基本操作ガイド】\n\n🔧 追加: 右上のボタンから\n📝 編集: 右クリック\n\n✨ 便利技:\n・線をクリック … 関節（折れ点）を追加\n・関節をダブルクリック … 関節（折れ点）を削除\n・Shift押しながら … 直角に配置",
+        style: {
+            width: 450, height: 260,
+            borderColor: '#007bff',
+            borderWidth: 2,
+            borderStyle: 'dashed',
+            backgroundColor: '#f0f7ff',
+            opacity: 90,
+            boxShadow: 'none'
+        },
+        text: {
+            color: '#333333',
+            fontSize: 14,
+            fontWeight: 'normal',
+            align: 'left',
+            bgColor: 'transparent',
+            x: 225, y: 130
+        }
+    },
+    // 5. ★移動：タイトル用ボックス（一番最後＝最前面！）
+    {
+        id: "title-box",
+        type: 'box',
+        // 説明書(x350, w450)の中央 => x425
+        // 説明書の上辺(y500)にまたがる => y460
+        x: 425, y: 460,
+        label: "まずは、\n矢印を動かしてみよう！",
+        style: {
+            width: 300, height: 80,
+            borderColor: 'transparent',
+            backgroundColor: '#fff176', // 黄色
+            opacity: 100,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        },
+        text: {
+            color: '#e65100', // オレンジ
+            fontSize: 20,
+            fontWeight: 'bold',
+            align: 'center',
+            bgColor: 'transparent',
+            x: 150, y: 40
+        }
+    }
+];
+
+// 線データ（ヒロさんの設定そのまま）
+let connections = [
+    {
+        id: "conn-tutorial",
+        start: { type: "anchor", nodeId: "node-a", side: "right", index: 4 },
+        end: { type: "anchor", nodeId: "node-b", side: "top", index: 4 },
+        waypoints: [
+            { x: 725, y: 195 }
+        ],
+        style: {
+            color: '#555',
+            width: 2,
+            dash: 'solid',
+            arrow: 'both'
+        },
+        label: {
+            text: "協力関係",
+            fontSize: 16,
+            color: '#333',
+            bgColor: '#ffffff',
+            offsetX: 0,
+            offsetY: -82
+        }
+    }
+];
+
+/*
 // 2. ノードデータ（人物リスト）
 // HTMLからデータをここに引っ越したの。
 let nodes = [
@@ -65,7 +174,7 @@ let nodes = [
     }
 ];
 
-// 線データ
+// 3.線データ
 let connections = [
     {
         id: "conn-1",
@@ -79,7 +188,12 @@ let connections = [
         end: { type: "point", x: 250, y: 350 },
         waypoints: []
     }
-];
+];*/
+
+// 4. アプリ全体の保存用設定
+let appSettings = {
+    backgroundColor: '#f0f2f5' // 初期色
+};
 
 // ====== グローバル変数 ======
 const container = document.getElementById('canvas-container');
@@ -270,6 +384,17 @@ function createNodeElement(nodeData) {
         // type情報を渡してメニューを開く（ボックスか人物かを判定）
         openContextMenu(nodeData, nodeData.type === 'box' ? 'box' : 'node', e.clientX, e.clientY);
     });
+    /*
+    // ダブルクリックでもメニューを開く
+    el.addEventListener('dblclick', (e) => {
+        e.preventDefault(); 
+        e.stopPropagation(); // 裏にあるものの反応を防ぐ
+        
+        selectNode(nodeData.id);
+        // 右クリックと同じようにメニューを開く
+        openContextMenu(nodeData, nodeData.type === 'box' ? 'box' : 'node', e.clientX, e.clientY);
+    });
+    */
 
     // 本体ドラッグ登録
     registerInteraction(el, { type: 'node', id: nodeData.id });
@@ -353,6 +478,9 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+    if (isTextDragging) {
+        recordHistory();
+    }
     isTextDragging = false;
 });
 
@@ -622,6 +750,7 @@ document.querySelectorAll('.toggle-group > button').forEach(btn => {
             updateNodeProperty('text', 'fontSize', parseInt(val));
             updateToggleActiveState('preset-font-size', val);
         }
+        recordHistory();
     });
 });
 
@@ -794,6 +923,14 @@ function drawConnection(conn, updatedIds) {
         selectConnection(conn.id);
         openContextMenu(conn, 'connection', e.clientX, e.clientY);
     });
+    /*
+    hitPath.addEventListener('dblclick', (e) => {
+        e.preventDefault(); 
+        e.stopPropagation();
+        
+        selectConnection(conn.id);
+        openContextMenu(conn, 'connection', e.clientX, e.clientY);
+    });*/
     svgLayer.appendChild(hitPath);
 
     // 5. 見た目用の線
@@ -851,13 +988,20 @@ function drawConnection(conn, updatedIds) {
         // ★変更：基準線を 'middle' から 'central' に変更（日本語の中央に合いやすい）
         text.setAttribute("dominant-baseline", "central");
 
-        if (conn.id === selectedConnId) {
-            text.style.pointerEvents = "all";
-            text.style.cursor = "move";
-            registerInteraction(text, { type: 'conn-label', connId: conn.id });
-        } else {
-            text.style.pointerEvents = "none";
-        }
+        text.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // 標準メニューをキャンセル
+            e.stopPropagation();
+            selectConnection(conn.id); // 線を選択状態にする
+            openContextMenu(conn, 'connection', e.clientX, e.clientY); // メニューを開く
+        });
+
+
+        // ★修正：選択状態に関わらず、常にイベントを受け付ける
+        text.style.pointerEvents = "all"; 
+        text.style.cursor = (conn.id === selectedConnId) ? "move" : "pointer"; // 未選択なら指カーソル
+        
+        // 常にドラッグ（インタラクション）登録
+        registerInteraction(text, { type: 'conn-label', connId: conn.id });
 
         if (l.bgColor && l.bgColor !== 'transparent') {
             const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -873,6 +1017,19 @@ function drawConnection(conn, updatedIds) {
             bg.setAttribute("height", hRect);
             bg.setAttribute("fill", l.bgColor);
             bg.setAttribute("rx", 4);
+
+            bg.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectConnection(conn.id);
+                openContextMenu(conn, 'connection', e.clientX, e.clientY);
+            });
+
+            // ★追加：背景も常にイベント有効
+            bg.style.pointerEvents = 'all';
+            bg.style.cursor = (conn.id === selectedConnId) ? "move" : "pointer";
+            registerInteraction(bg, { type: 'conn-label', connId: conn.id });
+
             svgLayer.appendChild(bg);
         }
         svgLayer.appendChild(text);
@@ -894,7 +1051,6 @@ function createOrUpdateHandle(conn, type, pos, updatedIds) {
 
     let el = document.getElementById(id);
 
-    // なければ作る
     if (!el) {
         el = document.createElement('div');
         el.id = id; // IDをつけるのが重要！
@@ -902,6 +1058,14 @@ function createOrUpdateHandle(conn, type, pos, updatedIds) {
         // タッチしやすくするCSS擬似要素のためにクラスはそのままでOK
 
         registerInteraction(el, { type: 'handle', connId: conn.id, handleType: type });
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // 標準メニューを出さない
+            e.stopPropagation(); // 後ろのキャンバスに反応させない
+            
+            // この線を選択状態にして、メニューを開く
+            selectConnection(conn.id);
+            openContextMenu(conn, 'connection', e.clientX, e.clientY);
+        });
         container.appendChild(el);
     }
 
@@ -932,11 +1096,27 @@ function createOrUpdateWaypoint(conn, index, pos, updatedIds) {
 
         registerInteraction(el, { type: 'waypoint', connId: conn.id, index: index });
 
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // 標準メニューを出さない
+            e.stopPropagation();
+
+            selectConnection(conn.id);
+            openContextMenu(conn, 'connection', e.clientX, e.clientY);
+        });
+
         // ダブルクリック削除
         el.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             conn.waypoints.splice(index, 1);
-            render();
+            render(); // メイン画面更新
+
+            // ★追加：もし今編集中の線なら、プレビューも即座に更新！
+            if (editingConnId === conn.id) {
+                updateConnPreview(conn);
+            }
+
+            // ★追加：操作が終わったので履歴に保存！
+            recordHistory();
         });
 
         container.appendChild(el);
@@ -955,6 +1135,76 @@ function createOrUpdateWaypoint(conn, index, pos, updatedIds) {
 
 // ====== ツールバー機能 ======
 
+// 1. ツールバーのドラッグ移動
+const toolbar = document.getElementById('toolbar');
+const toolbarHandle = document.getElementById('toolbar-drag-handle');
+let isToolbarDragging = false;
+let toolbarOffset = { x: 0, y: 0 };
+
+toolbarHandle.addEventListener('mousedown', (e) => {
+    e.stopPropagation(); // キャンバスのクリックイベントを止める
+    isToolbarDragging = true;
+
+    // 現在の位置（ウィンドウ内座標）を取得
+    const rect = toolbar.getBoundingClientRect();
+    toolbarOffset.x = e.clientX - rect.left;
+    toolbarOffset.y = e.clientY - rect.top;
+
+    // 右寄せ(right)指定だと動きにくいから、現在のleft/top位置に固定しなおすテクニック
+    toolbar.style.right = 'auto';
+    toolbar.style.left = rect.left + 'px';
+    toolbar.style.top = rect.top + 'px';
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isToolbarDragging) return;
+    e.preventDefault();
+
+    const newLeft = e.clientX - toolbarOffset.x;
+    const newTop = e.clientY - toolbarOffset.y;
+
+    toolbar.style.left = newLeft + 'px';
+    toolbar.style.top = newTop + 'px';
+});
+
+window.addEventListener('mouseup', () => {
+    isToolbarDragging = false;
+});
+
+
+// 2. 「＋ 矢印」ボタン（独立した線を生成）
+document.getElementById('btn-add-conn').addEventListener('click', () => {
+    // 画面中央あたりに線を生成
+    // 誰ともつながっていない「自由な線」を作るわ
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+
+    const newConn = {
+        id: generateId(),
+        // 始点と終点を座標指定で作る
+        start: { type: 'point', x: cx - 100, y: cy },
+        end: { type: 'point', x: cx + 100, y: cy },
+        waypoints: [],
+        style: {
+            color: '#555',
+            width: 2,
+            dash: 'solid',
+            arrow: 'end' // デフォルトで矢印つきにしてみた！
+        },
+        label: {
+            text: "新規の線",
+            fontSize: 12,
+            color: '#333'
+        }
+    };
+
+    connections.push(newConn);
+
+    // 追加した線を即選択！
+    selectNode(null); // ノード選択解除
+    selectConnection(newConn.id);
+});
+
 // 人物追加ボタン
 document.getElementById('btn-add-node').addEventListener('click', () => {
     // 画面中央あたりにランダムに配置
@@ -967,15 +1217,15 @@ document.getElementById('btn-add-node').addEventListener('click', () => {
         y: y,
         label: "新規人物",
         style: {
-            width: 120, height: 60,
+            width: 90, height: 90, // ★変更：90x90の正方形に！
             borderColor: '#333333',
-            borderWidth: 2,       // ★初期値: 中
+            borderWidth: 2,
         },
         text: {
             color: '#333333',
-            fontSize: 14,         // ★初期値: 中
-            fontWeight: 'normal', // ★初期値: 普通
-            x: 60, y: 30
+            fontSize: 14,
+            fontWeight: 'normal',
+            x: 45, y: 45 // ★変更：真ん中になるように調整（90の半分）
         }
     };
 
@@ -985,6 +1235,7 @@ document.getElementById('btn-add-node').addEventListener('click', () => {
     selectNode(newNode.id);
 
     // 画面更新（initNodesを呼ぶと全部作り直してくれるように修正が必要ね、後述！）
+    recordHistory();
     refreshScreen();
 });
 
@@ -1021,29 +1272,98 @@ document.getElementById('btn-add-box').addEventListener('click', () => {
 
     nodes.push(newBox);
     selectNode(newBox.id);
+    recordHistory();
     refreshScreen();
 });
 
 // 削除ボタン
 document.getElementById('btn-delete').addEventListener('click', () => {
-    if (!selectedId) return; // 何も選んでなければ何もしない
+    // 1. 人物・ボックスが選ばれている場合
+    if (selectedId) {
+        const nodeIndex = nodes.findIndex(n => n.id === selectedId);
+        if (nodeIndex !== -1) {
+            nodes.splice(nodeIndex, 1);
 
-    // 1. ノード一覧から削除
-    const nodeIndex = nodes.findIndex(n => n.id === selectedId);
-    if (nodeIndex !== -1) {
-        nodes.splice(nodeIndex, 1);
+            // 関連する線も削除
+            connections = connections.filter(conn => {
+                const isRelated = (conn.start.nodeId === selectedId) || (conn.end.nodeId === selectedId);
+                return !isRelated;
+            });
 
-        // 2. そのノードに関連する線も全部削除（これ重要！）
-        connections = connections.filter(conn => {
-            // startかendのどちらかが削除対象のIDだったら、その線も消す
-            const isRelated = (conn.start.nodeId === selectedId) || (conn.end.nodeId === selectedId);
-            return !isRelated;
-        });
+            selectedId = null;
+            recordHistory();
+            refreshScreen();
+        }
+    }
+    // 2. 線だけが選ばれている場合（★追加）
+    else if (selectedConnId) {
+        const connIndex = connections.findIndex(c => c.id === selectedConnId);
+        if (connIndex !== -1) {
+            connections.splice(connIndex, 1); // 線リストから削除
 
-        selectedId = null;
-        refreshScreen();
+            selectedConnId = null;
+            render(); // 再描画
+            closeContextMenu(); // メニューが開いてたら閉じる
+            recordHistory();
+        }
     }
 });
+
+// ====== 背景色設定機能 ======
+
+const bgPicker = document.getElementById('tool-bg-picker');
+const bgHex = document.getElementById('tool-bg-hex');
+
+// 色を変更する関数（共通化）
+function updateAppBackground(color) {
+    // 1. 状態を保存（これでsave対応バッチリ！）
+    appSettings.backgroundColor = color;
+
+    // 2. 画面に反映
+    document.body.style.backgroundColor = color;
+
+    // 3. 入力欄を同期
+    // (入力中の要素自身を書き換えるとカーソルが飛ぶことがあるのでチェック)
+    if (document.activeElement !== bgHex) {
+        bgHex.value = color;
+    }
+    if (document.activeElement !== bgPicker) {
+        bgPicker.value = color;
+    }
+}
+
+// ピッカーを動かした時
+bgPicker.addEventListener('input', (e) => {
+    updateAppBackground(e.target.value);
+});
+
+// ★追加：ピッカーの操作が終わった時（ここで保存！）
+bgPicker.addEventListener('change', recordHistory);
+
+// HEXコードを入力した時
+bgHex.addEventListener('change', (e) => {
+    let val = e.target.value;
+
+    // #が抜けてたら補完
+    if (val && !val.startsWith('#')) val = '#' + val;
+
+    // 正しいカラーコードかチェック (3桁か6桁)
+    if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
+        // 3桁なら6桁に直す（例: #fff -> #ffffff）
+        if (val.length === 4) {
+            val = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
+        }
+        updateAppBackground(val);
+        recordHistory();
+    } else {
+        // 間違ってたら元の色に戻す（親切設計！）
+        bgHex.value = appSettings.backgroundColor;
+    }
+});
+
+// ★初期化時に色を適用（ロード処理などで役立つわ）
+updateAppBackground(appSettings.backgroundColor);
+
 
 // 画面再描画ヘルパー（便利なので作ったわ）
 function refreshScreen() {
@@ -1234,6 +1554,14 @@ function openContextMenu(targetData, type, mouseX, mouseY) {
 
     contextMenu.style.left = Math.max(padding, posX) + 'px';
     contextMenu.style.top = Math.max(padding, posY) + 'px';
+
+    // ★追加：パネル内の全入力要素に「変更確定したら履歴保存」を仕込む
+    const inputs = contextMenu.querySelectorAll('input, textarea, select');
+    inputs.forEach(input => {
+        // 重複登録を防ぐために一旦削除してから登録（簡易手法）
+        input.removeEventListener('change', recordHistory);
+        input.addEventListener('change', recordHistory);
+    });
 }
 
 function closeContextMenu() {
@@ -1498,6 +1826,7 @@ function applyColor(target, color) {
         render();
         updateConnPreview(conn);
     }
+    recordHistory();
 }
 
 // ★線のプレビュー更新関数
@@ -1564,6 +1893,9 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+    if (isPreviewConnDragging) {
+        recordHistory();
+    }
     isPreviewConnDragging = false;
 });
 
@@ -1842,8 +2174,8 @@ function refreshNodeStyle(node) {
         previewBox.style.width = w + 'px';
         previewBox.style.height = h + 'px';
 
-        const MAX_W = 260; 
-        const MAX_H = 160; 
+        const MAX_W = 260;
+        const MAX_H = 160;
         let scale = 1;
 
         if (w > MAX_W || h > MAX_H) {
@@ -1864,7 +2196,7 @@ function refreshNodeStyle(node) {
         // ハンドルの逆スケール
         const handles = previewBox.querySelectorAll('.resize-handle');
         handles.forEach(hd => {
-            hd.style.transform = `scale(${1 / scale})`; 
+            hd.style.transform = `scale(${1 / scale})`;
         });
     }
     // --- ★縮小ロジックここまで ---
@@ -1887,15 +2219,15 @@ function refreshNodeStyle(node) {
 
     // 3. 背景（分岐処理）
     const bgCol = node.style?.backgroundColor || '#ffffff';
-    
+
     if (node.type === 'box') {
         // ボックス
         const op = node.style?.opacity !== undefined ? node.style.opacity : 100;
         const rgba = hexToRgba(bgCol, op);
-        
+
         el.style.backgroundColor = rgba;
         el.style.backgroundImage = 'none';
-        
+
         if (editingNodeId === node.id) {
             previewBox.style.backgroundColor = rgba;
             previewBox.style.backgroundImage = 'none';
@@ -1903,10 +2235,10 @@ function refreshNodeStyle(node) {
     } else {
         // 人物
         const bgImg = node.style?.backgroundImage || 'none';
-        
+
         el.style.backgroundColor = 'white';
         el.style.backgroundImage = bgImg;
-        
+
         if (editingNodeId === node.id) {
             previewBox.style.backgroundColor = 'white';
             previewBox.style.backgroundImage = bgImg;
@@ -1934,7 +2266,7 @@ function refreshNodeStyle(node) {
     // 文字背景
     const txtBgCol = node.text?.bgColor || 'transparent';
     label.style.backgroundColor = txtBgCol;
-    
+
     if (txtBgCol !== 'transparent') {
         label.style.padding = '2px 4px';
         label.style.borderRadius = '4px';
@@ -1959,7 +2291,7 @@ function refreshNodeStyle(node) {
     let boxCss = 'none';
     if (bShd === 'black') boxCss = '0 4px 8px rgba(0,0,0,0.4)';
     else if (bShd === 'white') boxCss = '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4)';
-    
+
     el.style.boxShadow = boxCss;
     if (editingNodeId === node.id) previewBox.style.boxShadow = boxCss;
 
@@ -1967,7 +2299,7 @@ function refreshNodeStyle(node) {
     let txtCss = 'none';
     if (tShd === 'black') txtCss = '2px 2px 2px rgba(0,0,0,0.6)';
     else if (tShd === 'white') txtCss = '0 0 4px white, 0 0 8px white';
-    
+
     label.style.textShadow = txtCss;
     if (editingNodeId === node.id) previewText.style.textShadow = txtCss;
 
@@ -1977,7 +2309,7 @@ function refreshNodeStyle(node) {
 
     label.style.left = tx + 'px';
     label.style.top = ty + 'px';
-    
+
     if (editingNodeId === node.id) {
         previewText.style.left = tx + 'px';
         previewText.style.top = ty + 'px';
@@ -1994,7 +2326,7 @@ function updatePreview(nodeData) {
     // 1. 基本サイズ
     const w = nodeData.style?.width || 120;
     const h = nodeData.style?.height || 60;
-    
+
     // --- ★ここから縮小ロジック ---
     const MAX_W = 260; // プレビューエリアの最大幅
     const MAX_H = 160; // プレビューエリアの最大高さ
@@ -2025,7 +2357,7 @@ function updatePreview(nodeData) {
     const handles = previewBox.querySelectorAll('.resize-handle');
     handles.forEach(hd => {
         // スケールが小さい時は、ハンドルを逆に大きくして見やすくする
-        hd.style.transform = `scale(${1 / scale})`; 
+        hd.style.transform = `scale(${1 / scale})`;
     });
     // --- ★縮小ロジックここまで ---
 
@@ -2037,21 +2369,21 @@ function updatePreview(nodeData) {
 
     // 3. 背景（分岐処理）
     const btnRemove = document.getElementById('btn-remove-image');
-    
+
     if (nodeData.type === 'box') {
         // ボックス：透過色
         const bgCol = nodeData.style?.backgroundColor || '#ffffff';
         const op = nodeData.style?.opacity !== undefined ? nodeData.style.opacity : 100;
-        
+
         previewBox.style.backgroundColor = hexToRgba(bgCol, op);
         previewBox.style.backgroundImage = 'none';
-        
+
         if (btnRemove) btnRemove.style.display = 'none';
     } else {
         // 人物：画像
         previewBox.style.backgroundColor = 'white';
         previewBox.style.backgroundImage = nodeData.style?.backgroundImage || 'none';
-        
+
         if (btnRemove) {
             if (nodeData.style?.backgroundImage && nodeData.style.backgroundImage !== 'none') {
                 btnRemove.style.display = 'flex';
@@ -2261,6 +2593,9 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+    if (isResizingPreview) {
+        recordHistory();
+    }
     isResizingPreview = false;
 });
 
@@ -2396,6 +2731,23 @@ function handlePointerDown(e, info) {
 
     if (info.type === 'node') {
         // [パターンA] ノード本体のドラッグ
+
+        selectNode(info.id);
+
+        // ====== メニューが開いていたら、中身をこのノードに切り替える ======
+        const menu = document.getElementById('context-menu');
+        if (menu.style.display === 'block') {
+            const node = nodes.find(n => n.id === info.id);
+            if (node) {
+                // メニューの位置（left/top）は今のままキープ！
+                const currentX = parseInt(menu.style.left) || 0;
+                const currentY = parseInt(menu.style.top) || 0;
+
+                // 切り替え実行！
+                openContextMenu(node, node.type === 'box' ? 'box' : 'node', currentX, currentY);
+            }
+        }
+
         dragInfo = info; // そのまま使う
 
         const currentLeft = parseFloat(currentDragTarget.style.left) || 0;
@@ -2410,9 +2762,20 @@ function handlePointerDown(e, info) {
         if (selectedId !== info.id) {
             // ★修正：元の info を書き換えず、新しいオブジェクトを作る！
             // これで「永続的な書き換えバグ」が直るの
-            dragInfo = { ...info, type: 'node' }; 
-            
+            dragInfo = { ...info, type: 'node' };
+
             selectNode(info.id);
+
+            const menu = document.getElementById('context-menu');
+            if (menu.style.display === 'block') {
+                const node = nodes.find(n => n.id === info.id);
+                if (node) {
+                    const currentX = parseInt(menu.style.left) || 0;
+                    const currentY = parseInt(menu.style.top) || 0;
+
+                    openContextMenu(node, node.type === 'box' ? 'box' : 'node', currentX, currentY);
+                }
+            }
 
             // ノード移動用のオフセット計算（ノード本体の座標基準）
             const nodeEl = document.getElementById(info.id);
@@ -2423,13 +2786,30 @@ function handlePointerDown(e, info) {
 
         // 選択中の文字ドラッグ（本来の文字移動）
         dragInfo = info; // そのまま使う
-        
+
         // 文字移動は「前回からの差分」で計算するため、
         // 開始時のマウス座標をそのまま記録するの（絶対座標）
         dragOffset.x = pos.x;
         dragOffset.y = pos.y;
 
-    } else if (info.type === 'conn-label') {
+        } else if (info.type === 'conn-label') {
+        // ★追加：もし未選択なら、ラベルを掴んだ時点で選択状態にする！
+        if (selectedConnId !== info.connId) {
+            selectNode(null);
+            selectConnection(info.connId);
+            
+            // メニューが開いていたら切り替える（既存ロジックと同じ）
+            const menu = document.getElementById('context-menu');
+            if (menu.style.display === 'block') {
+                 const conn = connections.find(c => c.id === info.connId);
+                 if (conn) {
+                     const currentX = parseInt(menu.style.left) || 0;
+                     const currentY = parseInt(menu.style.top) || 0;
+                     openContextMenu(conn, 'connection', currentX, currentY);
+                 }
+            }
+        }
+
         // [パターンC] 線ラベルのドラッグ
         dragInfo = info;
         dragOffset.x = pos.x;
@@ -2451,6 +2831,18 @@ function onLineClick(e, conn) {
     if (selectedConnId !== conn.id) {
         selectNode(null);          // 人物の選択解除
         selectConnection(conn.id); // 線を選択
+
+        // ====== メニューが開いていたら、内容をこの線に切り替える ======
+        const menu = document.getElementById('context-menu');
+        if (menu.style.display === 'block') {
+            // 現在の位置をキープ
+            const currentX = parseInt(menu.style.left) || 0;
+            const currentY = parseInt(menu.style.top) || 0;
+
+            // 切り替え実行！
+            openContextMenu(conn, 'connection', currentX, currentY);
+        }
+
         return; // ★ここで処理を終わらせる（関節は作らない！）
     }
 
@@ -2509,7 +2901,7 @@ function onLineClick(e, conn) {
 
         // Case 1: 線ラベル or ノード文字 のドラッグ（差分計算方式）
         if (dragInfo.type === 'conn-label' || dragInfo.type === 'node-text') {
-            
+
             // 前回位置からの差分(Delta)を計算
             const dx = pos.x - dragOffset.x;
             const dy = pos.y - dragOffset.y;
@@ -2525,11 +2917,11 @@ function onLineClick(e, conn) {
                     if (!conn.label) conn.label = {};
                     conn.label.offsetX = (conn.label.offsetX || 0) + dx;
                     conn.label.offsetY = (conn.label.offsetY || 0) + dy;
-                    
+
                     render();
                     if (editingConnId === conn.id) updateConnPreview(conn);
                 }
-            } 
+            }
             else if (dragInfo.type === 'node-text') {
                 // ノード文字移動
                 const node = nodes.find(n => n.id === dragInfo.id);
@@ -2591,6 +2983,32 @@ function onLineClick(e, conn) {
             if (editingConnId === conn.id) updateConnPreview(conn);
 
         } else if (dragInfo.type === 'waypoint') {
+
+            // 画面外に出たかチェック（削除判定）
+            const margin = 50; // 画面端から50px以内
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            if (pos.x < margin || pos.x > w - margin || pos.y < margin || pos.y > h - margin) {
+                // 範囲外に出た！削除実行！
+                const conn = connections.find(c => c.id === dragInfo.connId);
+                if (conn) {
+                    conn.waypoints.splice(dragInfo.index, 1);
+                    
+                    // 即座に画面更新
+                    render();
+                    if (editingConnId === conn.id) updateConnPreview(conn);
+                    
+                    // 履歴保存
+                    recordHistory();
+                }
+                
+                // ★重要：ドラッグを強制終了させる（これ以上動かすとエラーになるから）
+                isDragging = false;
+                dragInfo = null;
+                return; // ここで処理を抜けるの！
+            }
+
             // ウェイポイント移動
             const conn = connections.find(c => c.id === dragInfo.connId);
             const wp = conn.waypoints[dragInfo.index];
@@ -2598,22 +3016,39 @@ function onLineClick(e, conn) {
             let finalY = targetY;
 
             if (e.shiftKey) {
-                // 直角維持ロジック
+                // ★修正：完全な直角（L字コーナー）を作るロジックに戻したわ！
                 let prevData, nextData;
+
+                // 前の点
                 if (dragInfo.index === 0) prevData = conn.start;
                 else prevData = conn.waypoints[dragInfo.index - 1];
 
+                // 次の点
                 if (dragInfo.index === conn.waypoints.length - 1) nextData = conn.end;
                 else nextData = conn.waypoints[dragInfo.index + 1];
 
                 const prevPos = getPointPosition(prevData);
                 const nextPos = getPointPosition(nextData);
-                
-                // 近い方の軸に合わせる
-                if (Math.abs(targetX - prevPos.x) < Math.abs(targetY - prevPos.y)) finalX = prevPos.x;
-                else if (Math.abs(targetY - prevPos.y) < Math.abs(targetX - prevPos.x)) finalY = prevPos.y;
-                // ※もっと厳密な直角ロジックが必要ならここを調整だけど、一旦これで
+
+                // 2つの「直角コーナー候補」を計算
+                // 候補1: 横に進んでから縦 (prev.yの高さで、next.xの位置へ)
+                const corner1 = { x: nextPos.x, y: prevPos.y };
+                // 候補2: 縦に進んでから横 (prev.xの位置で、next.yの高さへ)
+                const corner2 = { x: prevPos.x, y: nextPos.y };
+
+                // マウスに近い方のコーナーにパチッと吸着させるの！
+                const dist1 = Math.hypot(targetX - corner1.x, targetY - corner1.y);
+                const dist2 = Math.hypot(targetX - corner2.x, targetY - corner2.y);
+
+                if (dist1 < dist2) {
+                    finalX = corner1.x;
+                    finalY = corner1.y;
+                } else {
+                    finalX = corner2.x;
+                    finalY = corner2.y;
+                }
             }
+
             wp.x = finalX;
             wp.y = finalY;
             render();
@@ -2629,6 +3064,7 @@ function onLineClick(e, conn) {
     window.addEventListener(evtName, (e) => {
         if (isDragging) {
             // console.log(`👋 RELEASED [${evtName}]`); // ログ追加
+            recordHistory();
         }
 
         if (longPressTimer) {
@@ -2668,6 +3104,7 @@ let isNodeResizing = false;
 let resizeNodeId = null;
 let nodeResizeStartPos = { x: 0, y: 0 };
 let nodeResizeStartSize = { w: 0, h: 0 };
+let nodeResizeStartCoords = { x: 0, y: 0 };
 let nodeResizeDir = '';
 
 function startResizeNode(e, nodeId, dir) {
@@ -2686,41 +3123,85 @@ function startResizeNode(e, nodeId, dir) {
             w: parseInt(node.style?.width) || 120,
             h: parseInt(node.style?.height) || 60
         };
+        // 現在の座標も記録！
+        nodeResizeStartCoords = {
+            x: node.x, // または parseFloat(node.style.left)
+            y: node.y
+        };
     }
 }
 
 // リサイズ中の動き
+
+// script.js - リサイズ用の mousemove リスナー（丸ごと置き換え）
 window.addEventListener('mousemove', (e) => {
+    // ★ここが目印！これ以外の mousemove は消さないでね
     if (!isNodeResizing || !resizeNodeId) return;
+    
     e.preventDefault();
 
     const dx = e.clientX - nodeResizeStartPos.x;
     const dy = e.clientY - nodeResizeStartPos.y;
 
-    let newW = nodeResizeStartSize.w;
-    let newH = nodeResizeStartSize.h;
+    // 開始時の情報
+    const startW = nodeResizeStartSize.w;
+    const startH = nodeResizeStartSize.h;
+    const startX = nodeResizeStartCoords.x;
+    const startY = nodeResizeStartCoords.y;
 
-    // 方向計算
-    if (nodeResizeDir.includes('e')) newW += dx;
-    if (nodeResizeDir.includes('w')) newW -= dx;
-    if (nodeResizeDir.includes('s')) newH += dy;
-    if (nodeResizeDir.includes('n')) newH -= dy;
+    let newW = startW;
+    let newH = startH;
+    let newX = startX;
+    let newY = startY;
 
+    // --- 1. 幅と高さの計算 ---
+    if (nodeResizeDir.includes('e')) newW = startW + dx;
+    if (nodeResizeDir.includes('w')) newW = startW - dx;
+    if (nodeResizeDir.includes('s')) newH = startH + dy;
+    if (nodeResizeDir.includes('n')) newH = startH - dy;
+
+    // 最小サイズ制限
     newW = Math.max(30, newW);
     newH = Math.max(30, newH);
 
+    // Shiftキー（正方形維持）
     if (e.shiftKey) {
         const size = Math.max(newW, newH);
         newW = size;
         newH = size;
     }
 
-    // ★重要: 既存の便利関数を使って一括更新！
-    // これでメインキャンバス、プレビュー、入力欄すべてが同期するわ
-    updateNodeSizeFromPreview(newW, newH);
+    // --- 2. 位置（X, Y）の補正計算 ---
+    // 左(w)を動かしている時
+    if (nodeResizeDir.includes('w')) {
+        newX = (startX + startW) - newW;
+    }
+    
+    // 上(n)を動かしている時
+    if (nodeResizeDir.includes('n')) {
+        newY = (startY + startH) - newH;
+    }
+
+    // --- 3. 反映 ---
+    const node = nodes.find(n => n.id === resizeNodeId);
+    if (node) {
+        node.x = newX;
+        node.y = newY;
+        
+        // DOM要素の位置更新
+        const el = document.getElementById(resizeNodeId);
+        el.style.left = newX + 'px';
+        el.style.top = newY + 'px';
+
+        // サイズ更新（既存関数を利用）
+        updateNodeSizeFromPreview(newW, newH);
+    }
 });
 
 window.addEventListener('mouseup', () => {
+    if (isNodeResizing) {
+        recordHistory();
+    }
     isNodeResizing = false;
     resizeNodeId = null;
 });
@@ -2731,7 +3212,7 @@ window.addEventListener('mouseup', () => {
 // initColorPalettesForBox(); // パレット初期化（後で作る）
 
 document.getElementById('input-box-border-width').addEventListener('input', (e) => {
-    updateNodeProperty('style', 'borderWidth', parseInt(e.target.value)||0);
+    updateNodeProperty('style', 'borderWidth', parseInt(e.target.value) || 0);
 });
 
 document.querySelectorAll('#toggle-box-border-style button').forEach(btn => {
@@ -2779,7 +3260,7 @@ document.querySelectorAll('#toggle-box-align button').forEach(btn => {
 // 6. 文字設定（色、サイズ、太字、影、背景）
 // ※パレットイベントは initColorPalettes で一括登録するからOK
 document.getElementById('input-box-font-size').addEventListener('input', (e) => {
-    updateNodeProperty('text', 'fontSize', parseInt(e.target.value)||14);
+    updateNodeProperty('text', 'fontSize', parseInt(e.target.value) || 14);
     updateToggleActiveState('preset-box-font-size', e.target.value);
 });
 document.querySelectorAll('#preset-box-font-size button').forEach(btn => {
@@ -2791,7 +3272,7 @@ document.querySelectorAll('#preset-box-font-size button').forEach(btn => {
 });
 document.getElementById('btn-box-bold').addEventListener('click', (e) => {
     e.target.classList.toggle('active');
-    updateNodeProperty('text', 'fontWeight', e.target.classList.contains('active')?'bold':'normal');
+    updateNodeProperty('text', 'fontWeight', e.target.classList.contains('active') ? 'bold' : 'normal');
 });
 document.querySelectorAll('#toggle-box-text-shadow button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2830,6 +3311,7 @@ document.getElementById('btn-duplicate').addEventListener('click', () => {
 
         nodes.push(clone);
 
+        recordHistory();
         // 画面更新
         refreshScreen();
 
@@ -2881,6 +3363,7 @@ document.getElementById('btn-duplicate').addEventListener('click', () => {
 
         connections.push(clone);
 
+        recordHistory();
         refreshScreen();
 
         // 新しい線を選択してメニューを開く
@@ -2892,6 +3375,67 @@ document.getElementById('btn-duplicate').addEventListener('click', () => {
         openContextMenu(clone, 'connection', currentX, currentY);
     }
 });
+
+// ====== 重なり順の変更機能 ======
+
+// 最前面へ（配列の末尾に移動）
+document.getElementById('btn-order-front').addEventListener('click', () => {
+    changeOrder('front');
+    recordHistory();
+});
+
+// 最背面へ（配列の先頭に移動）
+document.getElementById('btn-order-back').addEventListener('click', () => {
+    changeOrder('back');
+    recordHistory();
+});
+
+function changeOrder(direction) {
+    // 1. ノード（人物・ボックス）の場合
+    if (editingNodeId) {
+        const idx = nodes.findIndex(n => n.id === editingNodeId);
+        if (idx === -1) return;
+
+        const targetNode = nodes[idx];
+
+        // 配列から削除
+        nodes.splice(idx, 1);
+
+        if (direction === 'front') {
+            // 末尾に追加（最前面）
+            nodes.push(targetNode);
+        } else {
+            // 先頭に追加（最背面）
+            nodes.unshift(targetNode);
+        }
+
+        // 画面全体を描き直して反映
+        refreshScreen();
+
+        // 選択状態とメニューを維持したまま、フォーカスし直す
+        // (refreshScreenでDOMが作り直されると選択が外れることがあるため)
+        selectNode(targetNode.id);
+    }
+    // 2. 矢印（コネクション）の場合
+    else if (editingConnId) {
+        const idx = connections.findIndex(c => c.id === editingConnId);
+        if (idx === -1) return;
+
+        const targetConn = connections[idx];
+
+        connections.splice(idx, 1);
+
+        if (direction === 'front') {
+            connections.push(targetConn);
+        } else {
+            connections.unshift(targetConn);
+        }
+
+        // 矢印は render() だけで反映されるわ
+        render();
+        selectConnection(targetConn.id);
+    }
+}
 
 // ====== アコーディオン制御 ======
 
@@ -2906,6 +3450,107 @@ document.querySelectorAll('.accordion-header').forEach(header => {
     });
 });
 
+
+// ====== 歴史管理システム（Undo/Redo） ======
+
+const MAX_HISTORY = 50; // 50回まで戻れる
+let historyStack = [];
+let historyIndex = -1;
+
+// 現在の状態を保存する関数
+function recordHistory() {
+    // 未来の履歴（Redo用）を断ち切る
+    if (historyIndex < historyStack.length - 1) {
+        historyStack = historyStack.slice(0, historyIndex + 1);
+    }
+
+    // データの完全コピー（スナップショット）を作成
+    const snapshot = JSON.stringify({
+        nodes: nodes,
+        connections: connections,
+        appSettings: appSettings
+    });
+
+    // 同じ状態の連続保存を防ぐ（軽量化）
+    if (historyStack.length > 0 && historyStack[historyIndex] === snapshot) {
+        return;
+    }
+
+    historyStack.push(snapshot);
+    if (historyStack.length > MAX_HISTORY) {
+        historyStack.shift(); // 古い履歴を捨てる
+    } else {
+        historyIndex++;
+    }
+
+    updateHistoryButtons();
+}
+
+// 履歴を復元する関数
+function restoreHistory(jsonString) {
+    const data = JSON.parse(jsonString);
+
+    // データを書き戻す
+    nodes = data.nodes;
+    connections = data.connections;
+    appSettings = data.appSettings;
+
+    // 画面を復元
+    refreshScreen(); // ノード・線を描画
+    document.body.style.backgroundColor = appSettings.backgroundColor;
+    document.getElementById('tool-bg-picker').value = appSettings.backgroundColor;
+    document.getElementById('tool-bg-hex').value = appSettings.backgroundColor;
+}
+
+// アンドゥ実行
+function executeUndo() {
+    if (historyIndex > 0) {
+        historyIndex--;
+        restoreHistory(historyStack[historyIndex]);
+        updateHistoryButtons();
+        // 選択状態などはリセットするのが無難
+        selectNode(null);
+        closeContextMenu();
+    }
+}
+
+// リドゥ実行
+function executeRedo() {
+    if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        restoreHistory(historyStack[historyIndex]);
+        updateHistoryButtons();
+        selectNode(null);
+        closeContextMenu();
+    }
+}
+
+// ボタンの見た目更新
+function updateHistoryButtons() {
+    document.getElementById('btn-undo').disabled = (historyIndex <= 0);
+    document.getElementById('btn-redo').disabled = (historyIndex >= historyStack.length - 1);
+}
+
+// イベント登録
+document.getElementById('btn-undo').addEventListener('click', executeUndo);
+document.getElementById('btn-redo').addEventListener('click', executeRedo);
+
+// キーボードショートカット (Ctrl+Z / Ctrl+Y)
+window.addEventListener('keydown', (e) => {
+    // 入力欄にいるときは発動しない
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        executeUndo();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { // MacはShift+Cmd+Zも一般的
+        e.preventDefault();
+        executeRedo();
+    }
+});
+
 // ====== アプリ起動 ======
 initNodes();
 render();
+recordHistory();
