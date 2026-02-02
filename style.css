@@ -1030,3 +1030,67 @@ input[type=range]::-webkit-slider-thumb {
 
 /* 複数選択されているノードの強調表示（既存の .selected と同じでOK） */
 /* .node.selected { ... } は既にあるからそのままでOK！ */
+
+
+/* ====== スポットライト機能 ====== */
+#spotlight-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* 初期状態：マウスの位置（左上0,0）に、半径150pxの穴を開ける */
+    /* transparent(透明) → rgba(黒の半透明) へのグラデーション */
+    background: radial-gradient(
+        circle at var(--x, 50%) var(--y, 50%), 
+        transparent 100px, 
+        rgba(0, 0, 0, 0.85) 150px
+    );
+    
+    /* ★魔法の呪文：これをつけないと、暗幕が邪魔して下のボタンが押せなくなる！ */
+    /* 「このレイヤーはクリックを無視して下に通してね」という意味よ */
+    pointer-events: none;
+    
+    /* 最前面に表示（ツールバーより上、全部の上！） */
+    z-index: 9999;
+    
+    /* 最初は隠しておく */
+    opacity: 0;
+    transition: opacity 0.3s ease; /* ふわっと切り替え */
+}
+
+/* ONになったら表示 */
+#spotlight-layer.active {
+    opacity: 1;
+}
+
+/* ボタンがONの時の見た目 */
+#btn-spotlight.active {
+    background-color: #333;
+    color: #fff;
+    border-color: #333;
+}
+
+/* ====== プレゼンモード（スポットライト中） ====== */
+
+/* 1. キャンバスへの操作を禁止 */
+body.presentation-mode #canvas-container {
+    pointer-events: none;
+}
+
+/* 2. 最強の矢印固定！（ここを変えたわ） */
+/* bodyだけでなく、その中の「すべての要素(*)」に対して強制的に矢印を適用するの */
+body.presentation-mode,
+body.presentation-mode * {
+    cursor: default !important;
+}
+
+/* 3. ただし、ツールバーだけは操作させたいから復活させる */
+body.presentation-mode #toolbar,
+body.presentation-mode #toolbar *, /* ツールバーの中身も復活 */
+body.presentation-mode #zoom-controls,
+body.presentation-mode #zoom-controls * {
+    pointer-events: auto;
+    cursor: auto !important; /* ここは通常のカーソルに戻す */
+}

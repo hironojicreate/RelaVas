@@ -3872,6 +3872,38 @@ function finishSelection() {
     }
 }
 
+// ====== スポットライト機能 ======
+
+const spotlightLayer = document.getElementById('spotlight-layer');
+const btnSpotlight = document.getElementById('btn-spotlight');
+let isSpotlightOn = false;
+
+// 1. 切り替えボタン
+btnSpotlight.addEventListener('click', () => {
+    isSpotlightOn = !isSpotlightOn;
+    
+    if (isSpotlightOn) {
+        spotlightLayer.classList.add('active');
+        btnSpotlight.classList.add('active');
+        document.body.classList.add('presentation-mode');
+    } else {
+        spotlightLayer.classList.remove('active');
+        btnSpotlight.classList.remove('active');
+        document.body.classList.remove('presentation-mode');
+    }
+});
+
+// 2. マウス追従（穴の位置を更新）
+window.addEventListener('mousemove', (e) => {
+    // スポットライトがOFFなら計算しない（省エネ）
+    if (!isSpotlightOn) return;
+
+    // CSS変数 (--x, --y) に現在のマウス座標を渡す
+    // これだけで、CSS側の radial-gradient の中心が動くの！
+    spotlightLayer.style.setProperty('--x', e.clientX + 'px');
+    spotlightLayer.style.setProperty('--y', e.clientY + 'px');
+});
+
 // ====== アプリ起動 ======
 initViewport(); // ★追加：最初に画面位置を合わせる！
 initNodes();

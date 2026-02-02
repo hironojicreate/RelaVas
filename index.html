@@ -24,28 +24,31 @@
             <input type="color" id="tool-bg-picker" value="#f0f2f5">
             <input type="text" id="tool-bg-hex" value="#f0f2f5" maxlength="7">
         </div>
-        
+
         <div class="tool-separator"></div>
         <button id="btn-undo" class="tool-btn" title="元に戻す" disabled>↩️</button>
         <button id="btn-redo" class="tool-btn" title="やり直す" disabled>↪️</button>
         <div class="tool-separator"></div>
-
+        <button id="btn-spotlight" class="tool-btn" title="スポットライト">🔦</button>
+        <div class="tool-separator"></div>
         <button id="btn-delete" class="tool-btn danger" title="選択した項目を削除">🗑️ 削除</button>
     </div>
 
     <div id="canvas-container">
         <div id="world-layer">
-            
+
             <div id="artboard-guide">
                 <div class="artboard-label">A4 Size (横) RelaVas-人物相関図作成アプリ-</div>
             </div>
 
             <svg id="svg-layer">
                 <defs>
-                    <marker id="arrow-head-end" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <marker id="arrow-head-end" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"
+                        markerUnits="strokeWidth">
                         <path d="M0,0 L0,6 L9,3 z" fill="context-stroke" />
                     </marker>
-                    <marker id="arrow-head-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <marker id="arrow-head-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"
+                        markerUnits="strokeWidth">
                         <path d="M9,0 L9,6 L0,3 z" fill="context-stroke" />
                     </marker>
                 </defs>
@@ -53,7 +56,7 @@
 
             <div id="snap-guide" class="snap-marker" style="display: none;"></div>
 
-            </div>
+        </div>
     </div>
     <div id="context-menu">
         <div id="menu-drag-handle" class="drag-handle">
@@ -62,34 +65,44 @@
         <button id="btn-order-front" class="header-action-btn left-btn-1" title="最前面へ">⬆️</button>
         <button id="btn-order-back" class="header-action-btn left-btn-2" title="最背面へ">⬇️</button>
         <button id="btn-duplicate" class="header-action-btn" title="複製を作成">❐</button>
-        
+
         <div class="menu-header">
-             <div id="preview-box" class="node-preview">
+            <div id="preview-box" class="node-preview">
                 <span id="preview-text">Sample</span>
                 <div class="resize-handle nw" data-dir="nw"></div>
                 <div class="resize-handle ne" data-dir="ne"></div>
                 <div class="resize-handle sw" data-dir="sw"></div>
                 <div class="resize-handle se" data-dir="se"></div>
             </div>
-             <div id="preview-conn-container" class="node-preview" style="display: none; border: none; background: #f8f9fa;">
+            <div id="preview-conn-container" class="node-preview"
+                style="display: none; border: none; background: #f8f9fa;">
                 <svg id="preview-conn-svg" width="100%" height="100%" style="overflow: visible;">
                     <defs>
-                        <marker id="preview-marker-end" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L0,6 L9,3 z" fill="#555" /></marker>
-                        <marker id="preview-marker-start" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M9,0 L9,6 L0,3 z" fill="#555" /></marker>
+                        <marker id="preview-marker-end" markerWidth="10" markerHeight="10" refX="0" refY="3"
+                            orient="auto" markerUnits="userSpaceOnUse">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#555" />
+                        </marker>
+                        <marker id="preview-marker-start" markerWidth="10" markerHeight="10" refX="9" refY="3"
+                            orient="auto" markerUnits="userSpaceOnUse">
+                            <path d="M9,0 L9,6 L0,3 z" fill="#555" />
+                        </marker>
                     </defs>
                     <path id="preview-conn-line" d="M 20,30 L 260,30" stroke="#555" stroke-width="2" fill="none" />
-                    <rect id="preview-conn-label-bg" x="0" y="0" width="0" height="0" fill="white" style="display:none;" />
-                    <text id="preview-conn-label" x="140" y="30" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#333" style="pointer-events: none;">Sample</text>
+                    <rect id="preview-conn-label-bg" x="0" y="0" width="0" height="0" fill="white"
+                        style="display:none;" />
+                    <text id="preview-conn-label" x="140" y="30" text-anchor="middle" dominant-baseline="middle"
+                        font-size="12" fill="#333" style="pointer-events: none;">Sample</text>
                 </svg>
             </div>
         </div>
-        
+
         <div class="menu-body">
             <div id="panel-node">
                 <div style="padding: 12px 12px 0 12px;">
                     <div class="menu-section">
                         <label class="menu-label">名前</label>
-                        <textarea id="input-label" rows="1" style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
+                        <textarea id="input-label" rows="1"
+                            style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
                     </div>
                     <div class="menu-section">
                         <label class="menu-label">サイズ</label>
@@ -102,25 +115,55 @@
                 <div class="accordion-item">
                     <div class="accordion-header">🎨 スタイル<span class="accordion-icon">▼</span></div>
                     <div class="accordion-content">
-                        <div class="menu-section"><label class="menu-label">枠の色</label><div id="palette-border" class="color-palette"></div></div>
-                        <div class="menu-section"><label class="menu-label">枠太さ</label><div class="input-row"><input type="number" id="input-border-width" value="2" min="0"><div class="toggle-group" id="preset-border-width"><button data-val="1">細</button><button data-val="2">中</button><button data-val="5">太</button></div></div></div>
-                        <div class="menu-section"><label class="menu-label">箱の影</label><div id="toggle-box-shadow" class="toggle-group" style="width:100%"><button data-val="none" style="flex:1">なし</button><button data-val="black" style="flex:1">黒</button><button data-val="white" style="flex:1">白</button></div></div>
+                        <div class="menu-section"><label class="menu-label">枠の色</label>
+                            <div id="palette-border" class="color-palette"></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">枠太さ</label>
+                            <div class="input-row"><input type="number" id="input-border-width" value="2" min="0">
+                                <div class="toggle-group" id="preset-border-width"><button
+                                        data-val="1">細</button><button data-val="2">中</button><button
+                                        data-val="5">太</button></div>
+                            </div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">箱の影</label>
+                            <div id="toggle-box-shadow" class="toggle-group" style="width:100%"><button data-val="none"
+                                    style="flex:1">なし</button><button data-val="black" style="flex:1">黒</button><button
+                                    data-val="white" style="flex:1">白</button></div>
+                        </div>
                     </div>
                 </div>
                 <div class="accordion-item">
                     <div class="accordion-header">🔤 文字設定<span class="accordion-icon">▼</span></div>
                     <div class="accordion-content">
-                         <div class="menu-section"><label class="menu-label">文字色</label><div id="palette-text" class="color-palette"></div></div>
-                         <div class="menu-section"><label class="menu-label">文字</label><div class="input-row"><input type="number" id="input-font-size" value="14" min="8"><span style="font-size:10px; align-self:center;">pt</span><div class="toggle-group" id="preset-font-size"><button data-val="12">小</button><button data-val="14">中</button><button data-val="20">大</button></div><button id="btn-font-bold" class="icon-btn" title="太字">B</button></div></div>
-                         <div class="menu-section"><label class="menu-label">文字背景</label><div id="palette-text-bg" class="color-palette"></div></div>
-                         <div class="menu-section"><label class="menu-label">文字影</label><div id="toggle-text-shadow" class="toggle-group" style="width:100%"><button data-val="none" style="flex:1">なし</button><button data-val="black" style="flex:1">黒</button><button data-val="white" style="flex:1">白</button></div></div>
+                        <div class="menu-section"><label class="menu-label">文字色</label>
+                            <div id="palette-text" class="color-palette"></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">文字</label>
+                            <div class="input-row"><input type="number" id="input-font-size" value="14" min="8"><span
+                                    style="font-size:10px; align-self:center;">pt</span>
+                                <div class="toggle-group" id="preset-font-size"><button data-val="12">小</button><button
+                                        data-val="14">中</button><button data-val="20">大</button></div><button
+                                    id="btn-font-bold" class="icon-btn" title="太字">B</button>
+                            </div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">文字背景</label>
+                            <div id="palette-text-bg" class="color-palette"></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">文字影</label>
+                            <div id="toggle-text-shadow" class="toggle-group" style="width:100%"><button data-val="none"
+                                    style="flex:1">なし</button><button data-val="black" style="flex:1">黒</button><button
+                                    data-val="white" style="flex:1">白</button></div>
+                        </div>
                     </div>
                 </div>
                 <div class="accordion-item">
                     <div class="accordion-header">📷 写真<span class="accordion-icon">▼</span></div>
                     <div class="accordion-content">
-                        <div class="menu-section"><button id="btn-upload-image" class="tool-btn" style="width:100%; justify-content:center;">📷 写真を選択</button><input type="file" id="input-image-file" accept="image/*" style="display: none;"></div>
-                        <div class="menu-section"><button id="btn-remove-image" class="tool-btn danger" style="width:100%; justify-content:center; display:none;">× 写真を削除</button></div>
+                        <div class="menu-section"><button id="btn-upload-image" class="tool-btn"
+                                style="width:100%; justify-content:center;">📷 写真を選択</button><input type="file"
+                                id="input-image-file" accept="image/*" style="display: none;"></div>
+                        <div class="menu-section"><button id="btn-remove-image" class="tool-btn danger"
+                                style="width:100%; justify-content:center; display:none;">× 写真を削除</button></div>
                     </div>
                 </div>
                 <div class="menu-actions"><button id="btn-menu-delete" class="btn-danger">🗑️ この人物を削除</button></div>
@@ -131,22 +174,67 @@
                     <div class="accordion-item open">
                         <div class="accordion-header">🎨 スタイル<span class="accordion-icon">▼</span></div>
                         <div class="accordion-content">
-                            <div class="menu-section"><label class="menu-label">枠の色</label><div id="palette-box-border" class="color-palette"></div></div>
-                            <div class="menu-section"><label class="menu-label">枠設定</label><div class="input-row"><input type="number" id="input-box-border-width" value="2" min="0" title="太さ"><div class="toggle-group" id="toggle-box-border-style" style="flex:1; margin-left:4px;"><button data-val="solid" style="flex:1">実線</button><button data-val="dashed" style="flex:1">破線</button></div></div></div>
-                            <div class="menu-section"><label class="menu-label">影</label><div id="toggle-box-box-shadow" class="toggle-group" style="width:100%"><button data-val="none" style="flex:1">なし</button><button data-val="black" style="flex:1">黒</button><button data-val="white" style="flex:1">白</button></div></div>
-                            <div class="menu-section"><label class="menu-label">塗り</label><div id="palette-box-bg" class="color-palette"></div></div>
-                            <div class="menu-section"><label class="menu-label">透過率</label><div class="input-row"><input type="range" id="input-box-opacity" min="0" max="100" value="100" style="flex:1;"><span id="val-box-opacity" style="width:30px; text-align:right; font-size:11px;">100%</span></div></div>
+                            <div class="menu-section"><label class="menu-label">枠の色</label>
+                                <div id="palette-box-border" class="color-palette"></div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">枠設定</label>
+                                <div class="input-row"><input type="number" id="input-box-border-width" value="2"
+                                        min="0" title="太さ">
+                                    <div class="toggle-group" id="toggle-box-border-style"
+                                        style="flex:1; margin-left:4px;"><button data-val="solid"
+                                            style="flex:1">実線</button><button data-val="dashed"
+                                            style="flex:1">破線</button></div>
+                                </div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">影</label>
+                                <div id="toggle-box-box-shadow" class="toggle-group" style="width:100%"><button
+                                        data-val="none" style="flex:1">なし</button><button data-val="black"
+                                        style="flex:1">黒</button><button data-val="white" style="flex:1">白</button>
+                                </div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">塗り</label>
+                                <div id="palette-box-bg" class="color-palette"></div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">透過率</label>
+                                <div class="input-row"><input type="range" id="input-box-opacity" min="0" max="100"
+                                        value="100" style="flex:1;"><span id="val-box-opacity"
+                                        style="width:30px; text-align:right; font-size:11px;">100%</span></div>
+                            </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <div class="accordion-header">🔤 文字設定<span class="accordion-icon">▼</span></div>
                         <div class="accordion-content">
-                            <div class="menu-section" style="align-items: flex-start;"><label class="menu-label" style="margin-top:4px;">内容</label><textarea id="input-box-label" rows="3" style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical; font-family: sans-serif;"></textarea></div>
-                            <div class="menu-section"><label class="menu-label">配置</label><div class="toggle-group" id="toggle-box-align" style="width:100%"><button data-val="left" style="flex:1">左</button><button data-val="center" style="flex:1">中</button><button data-val="right" style="flex:1">右</button></div></div>
-                            <div class="menu-section"><label class="menu-label">文字色</label><div id="palette-box-text" class="color-palette"></div></div>
-                            <div class="menu-section"><label class="menu-label">サイズ</label><div class="input-row"><input type="number" id="input-box-font-size" value="14" min="8"><div class="toggle-group" id="preset-box-font-size"><button data-val="12">小</button><button data-val="14">中</button><button data-val="20">大</button></div><button id="btn-box-bold" class="icon-btn" title="太字">B</button></div></div>
-                            <div class="menu-section"><label class="menu-label">文字背景</label><div id="palette-box-text-bg" class="color-palette"></div></div>
-                            <div class="menu-section"><label class="menu-label">文字影</label><div id="toggle-box-text-shadow" class="toggle-group" style="width:100%"><button data-val="none" style="flex:1">なし</button><button data-val="black" style="flex:1">黒</button><button data-val="white" style="flex:1">白</button></div></div>
+                            <div class="menu-section" style="align-items: flex-start;"><label class="menu-label"
+                                    style="margin-top:4px;">内容</label><textarea id="input-box-label" rows="3"
+                                    style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical; font-family: sans-serif;"></textarea>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">配置</label>
+                                <div class="toggle-group" id="toggle-box-align" style="width:100%"><button
+                                        data-val="left" style="flex:1">左</button><button data-val="center"
+                                        style="flex:1">中</button><button data-val="right" style="flex:1">右</button>
+                                </div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">文字色</label>
+                                <div id="palette-box-text" class="color-palette"></div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">サイズ</label>
+                                <div class="input-row"><input type="number" id="input-box-font-size" value="14" min="8">
+                                    <div class="toggle-group" id="preset-box-font-size"><button
+                                            data-val="12">小</button><button data-val="14">中</button><button
+                                            data-val="20">大</button></div><button id="btn-box-bold" class="icon-btn"
+                                        title="太字">B</button>
+                                </div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">文字背景</label>
+                                <div id="palette-box-text-bg" class="color-palette"></div>
+                            </div>
+                            <div class="menu-section"><label class="menu-label">文字影</label>
+                                <div id="toggle-box-text-shadow" class="toggle-group" style="width:100%"><button
+                                        data-val="none" style="flex:1">なし</button><button data-val="black"
+                                        style="flex:1">黒</button><button data-val="white" style="flex:1">白</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -157,26 +245,63 @@
                 <div class="accordion-item open">
                     <div class="accordion-header">🎨 線のスタイル<span class="accordion-icon">▼</span></div>
                     <div class="accordion-content">
-                        <div class="menu-section"><label class="menu-label">線の色</label><div id="palette-conn-stroke" class="color-palette"></div></div>
-                        <div class="menu-section"><label class="menu-label">太さ</label><div class="input-row"><input type="number" id="input-conn-width" value="2" min="1"><div class="toggle-group" id="preset-conn-width"><button data-val="2">細</button><button data-val="4">中</button><button data-val="6">太</button></div></div></div>
-                        <div class="menu-section"><label class="menu-label">形状</label><div class="toggle-group" id="toggle-conn-dash" style="width: 100%;"><button data-val="solid" style="flex:1;">実線</button><button data-val="dashed" style="flex:1;">破線</button></div></div>
-                        <div class="menu-section"><label class="menu-label">矢印</label><div class="toggle-group" id="toggle-conn-arrow" style="width: 100%;"><button data-val="none" style="flex:1;">なし</button><button data-val="start" style="flex:1;">←</button><button data-val="end" style="flex:1;">→</button><button data-val="both" style="flex:1;">⇄</button></div></div>
+                        <div class="menu-section"><label class="menu-label">線の色</label>
+                            <div id="palette-conn-stroke" class="color-palette"></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">太さ</label>
+                            <div class="input-row"><input type="number" id="input-conn-width" value="2" min="1">
+                                <div class="toggle-group" id="preset-conn-width"><button data-val="2">細</button><button
+                                        data-val="4">中</button><button data-val="6">太</button></div>
+                            </div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">形状</label>
+                            <div class="toggle-group" id="toggle-conn-dash" style="width: 100%;"><button
+                                    data-val="solid" style="flex:1;">実線</button><button data-val="dashed"
+                                    style="flex:1;">破線</button></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">矢印</label>
+                            <div class="toggle-group" id="toggle-conn-arrow" style="width: 100%;"><button
+                                    data-val="none" style="flex:1;">なし</button><button data-val="start"
+                                    style="flex:1;">←</button><button data-val="end" style="flex:1;">→</button><button
+                                    data-val="both" style="flex:1;">⇄</button></div>
+                        </div>
                     </div>
                 </div>
                 <div class="accordion-item">
                     <div class="accordion-header">🔤 ラベル設定<span class="accordion-icon">▼</span></div>
                     <div class="accordion-content">
-                        <div class="menu-section"><label class="menu-label">内容</label><textarea id="input-conn-label" rows="1" placeholder="関係名..." style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea></div>
-                        <div class="menu-section"><label class="menu-label">方向</label><div class="toggle-group" id="toggle-conn-vertical" style="width: 100%;"><button data-val="horizontal" style="flex:1;">横書き</button><button data-val="vertical" style="flex:1;">縦書き</button></div></div>
-                        <div class="menu-section"><label class="menu-label">文字色</label><div id="palette-conn-text" class="color-palette"></div></div>
-                        <div class="menu-section"><label class="menu-label">サイズ</label><div class="input-row"><input type="number" id="input-conn-font-size" value="12" min="8"><span style="font-size:10px; align-self:center;">pt</span><div class="toggle-group" id="preset-conn-font-size"><button data-val="10">小</button><button data-val="12">中</button><button data-val="16">大</button></div><button id="btn-conn-bold" class="icon-btn" title="太字">B</button></div></div>
-                        <div class="menu-section"><label class="menu-label">文字背景</label><div id="palette-conn-bg" class="color-palette"></div></div>
+                        <div class="menu-section"><label class="menu-label">内容</label><textarea id="input-conn-label"
+                                rows="1" placeholder="関係名..."
+                                style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">方向</label>
+                            <div class="toggle-group" id="toggle-conn-vertical" style="width: 100%;"><button
+                                    data-val="horizontal" style="flex:1;">横書き</button><button data-val="vertical"
+                                    style="flex:1;">縦書き</button></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">文字色</label>
+                            <div id="palette-conn-text" class="color-palette"></div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">サイズ</label>
+                            <div class="input-row"><input type="number" id="input-conn-font-size" value="12"
+                                    min="8"><span style="font-size:10px; align-self:center;">pt</span>
+                                <div class="toggle-group" id="preset-conn-font-size"><button
+                                        data-val="10">小</button><button data-val="12">中</button><button
+                                        data-val="16">大</button></div><button id="btn-conn-bold" class="icon-btn"
+                                    title="太字">B</button>
+                            </div>
+                        </div>
+                        <div class="menu-section"><label class="menu-label">文字背景</label>
+                            <div id="palette-conn-bg" class="color-palette"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="menu-actions"><button id="btn-conn-delete" class="btn-danger">🗑️ この線を削除</button></div>
             </div>
         </div>
     </div>
+
+    <div id="spotlight-layer"></div>
 
     <script src="script.js"></script>
 </body>
