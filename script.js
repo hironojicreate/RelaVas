@@ -161,7 +161,7 @@ const svgLayer = document.getElementById('svg-layer');
 const snapGuide = document.getElementById('snap-guide');
 
 // ★追加：ビューポート（視点）管理
-let viewport = { x: 0, y: 0 };
+let viewport = { x: 0, y: 0, scale: 1 };
 let isPanning = false; // パン操作中フラグ
 let panStart = { x: 0, y: 0 };
 let isDragging = false;
@@ -176,6 +176,8 @@ let isSelecting = false;         // 範囲選択中かどうかのフラグ
 let selectionStart = { x: 0, y: 0 }; // 範囲選択の開始位置
 let selectionBoxEl = null;       // 範囲選択の見た目要素
 let selectedConnIds = new Set(); // ★追加：複数の矢印IDを管理する変数
+
+
 
 
 
@@ -400,6 +402,11 @@ function selectNode(id, addToSelection = false) {
     // addToSelection が false (通常クリック) なら、他の選択を解除
     if (!addToSelection) {
         selectedNodeIds.clear();
+
+        // ★修正ポイント：線の選択リスト（Set）もここで確実に消すの！
+        selectedConnIds.clear(); 
+        selectedConnId = null;   
+
         // DOM上のクラスも全部消す
         document.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
     }
@@ -407,8 +414,7 @@ function selectNode(id, addToSelection = false) {
     selectedId = id; // プロパティパネル用（最後に選んだやつ）
 
     if (id) {
-        // 線を選んでいたら解除
-        if (!addToSelection) selectedConnId = null;
+        // ★修正ポイント：上で消したから、ここの if (!addToSelection) selectedConnId = null; は不要になったわ
 
         selectedNodeIds.add(id);
         const el = document.getElementById(id);
@@ -503,11 +509,14 @@ function getAnchorCoordinate(nodeId, side, index) {
     const node = document.getElementById(nodeId);
     if (!node) return { x: 0, y: 0 };
 
-    const rect = node.getBoundingClientRect();
+    // ★修正ポイント：getBoundingClientRect() は「見た目のサイズ」だからNG！
+    // 代わりに style.width / height から「本当のサイズ」を取得するの。
+    const width = parseFloat(node.style.width);
+    const height = parseFloat(node.style.height);
+    
+    // 位置も style から取得（これは元々OKだった部分）
     const left = parseFloat(node.style.left);
     const top = parseFloat(node.style.top);
-    const width = rect.width;
-    const height = rect.height;
 
     const stepX = width / (ANCHOR_COUNT - 1);
     const stepY = height / (ANCHOR_COUNT - 1);
@@ -531,6 +540,7 @@ function getPointPosition(data) {
     }
 }
 
+// 近くのアンカーを探す関数（こちらもズーム対応修正！）
 function findClosestAnchor(x, y) {
     let closest = null;
     let minDist = SNAP_DISTANCE;
@@ -538,13 +548,19 @@ function findClosestAnchor(x, y) {
     const domNodes = document.querySelectorAll('.node');
     domNodes.forEach(node => {
         const nodeId = node.id;
-        const rect = node.getBoundingClientRect();
-
-        const buffer = 50;
+        
+        // ★修正ポイント：ここも style からサイズを取得！
+        // これでズーム中でも吸着範囲が正しく計算されるわ
+        const width = parseFloat(node.style.width);
+        const height = parseFloat(node.style.height);
+        
         const nLeft = parseFloat(node.style.left);
         const nTop = parseFloat(node.style.top);
-        if (x < nLeft - buffer || x > nLeft + rect.width + buffer ||
-            y < nTop - buffer || y > nTop + rect.height + buffer) {
+        
+        // 簡易ヒットチェック（範囲外なら計算スキップ）
+        const buffer = 50;
+        if (x < nLeft - buffer || x > nLeft + width + buffer ||
+            y < nTop - buffer || y > nTop + height + buffer) {
             return;
         }
 
@@ -2838,11 +2854,16 @@ function handlePointerDown(e, info) {
 }
 
 // ★新規追加：線の直線部分を押したときの処理
+// ★修正：線の直線部分を押したときの処理（ズーム対応＆右クリ修正版）
 function handleLineMouseDown(e, conn) {
+    // 1. 右クリック暴発防止（右クリックは button 2 なの）
+    // 左クリック(0)以外は、ここで帰ってもらうわ！
+    if (e.button !== 0) return;
+
     if (e.shiftKey) return; // Shiftキーの機能（もしあれば）を阻害しないように
     e.stopPropagation(); // 背景クリックなどを防ぐ
 
-    // 1. 未選択なら「選択」するだけ（ドラッグは開始しない）
+    // 2. 未選択なら「選択」するだけ（ドラッグは開始しない）
     if (selectedConnId !== conn.id) {
         selectNode(null);
         selectConnection(conn.id);
@@ -2857,14 +2878,17 @@ function handleLineMouseDown(e, conn) {
         return;
     }
 
-    // 2. 選択済みなら「関節を追加」して「即ドラッグ開始」！
+    // 3. 選択済みなら「関節を追加」して「即ドラッグ開始」！
 
     const pos = getPointerPos(e);
-    const rect = container.getBoundingClientRect();
-    const clickX = pos.x - rect.left;
-    const clickY = pos.y - rect.top;
+    
+    // ★ここが修正のキモ！
+    // 画面上のマウス位置(pos)から、viewport(視点)のズレを引いて、
+    // さらに scale(倍率) で割ることで、正しい「ワールド座標」を出すの。
+    const clickX = (pos.x - viewport.x) / viewport.scale;
+    const clickY = (pos.y - viewport.y) / viewport.scale;
 
-    // 挿入位置の計算（既存ロジックと同じ）
+    // 挿入位置の計算
     const allPoints = [getPointPosition(conn.start)];
     conn.waypoints.forEach(wp => allPoints.push(wp));
     allPoints.push(getPointPosition(conn.end));
@@ -2875,6 +2899,8 @@ function handleLineMouseDown(e, conn) {
     for (let i = 0; i < allPoints.length - 1; i++) {
         const A = allPoints[i];
         const B = allPoints[i + 1];
+        
+        // ここで計算する距離も、補正後の clickX, clickY を使うから正確になるわ
         const distAC = Math.hypot(clickX - A.x, clickY - A.y);
         const distCB = Math.hypot(B.x - clickX, B.y - clickY);
         const distAB = Math.hypot(B.x - A.x, B.y - A.y);
@@ -2886,14 +2912,14 @@ function handleLineMouseDown(e, conn) {
         }
     }
 
-    // 関節を追加
+    // 関節を追加（補正済みの座標を使うから、カーソルの真下にできる！）
     conn.waypoints.splice(bestIndex, 0, { x: clickX, y: clickY });
 
-    // 画面更新（これで新しい関節のDOMが生成される）
+    // 画面更新
     render();
     if (editingConnId === conn.id) updateConnPreview(conn);
 
-    // ★ここが魔法！今作った関節を強制的にドラッグ状態にする
+    // ドラッグ開始
     isDragging = true;
     dragInfo = {
         type: 'waypoint',
@@ -2901,72 +2927,11 @@ function handleLineMouseDown(e, conn) {
         index: bestIndex
     };
 
-    // オフセット設定（絶対位置指定なのでコンテナの左上を基準にする）
-    dragOffset.x = rect.left;
-    dragOffset.y = rect.top;
-
-    // ※マウスアップ時に履歴保存されるので、ここでは何もしなくてOK
+    // ★重要：mousemoveでの計算用オフセット
+    // ここも rect.left ではなく viewport.x を使うことで統一するわ
+    dragOffset.x = viewport.x;
+    dragOffset.y = viewport.y;
 }
-
-// （注意：古い function onLineClick(e, conn) {...} は削除してね！）
-
-/*
-function onLineClick(e, conn) {
-    if (e.shiftKey) return;
-
-    // ★変更：もし「この線がまだ選択されていなかったら」
-    if (selectedConnId !== conn.id) {
-        selectNode(null);          // 人物の選択解除
-        selectConnection(conn.id); // 線を選択
-
-        // ====== メニューが開いていたら、内容をこの線に切り替える ======
-        const menu = document.getElementById('context-menu');
-        if (menu.style.display === 'block') {
-            // 現在の位置をキープ
-            const currentX = parseInt(menu.style.left) || 0;
-            const currentY = parseInt(menu.style.top) || 0;
-
-            // 切り替え実行！
-            openContextMenu(conn, 'connection', currentX, currentY);
-        }
-
-        return; // ★ここで処理を終わらせる（関節は作らない！）
-    }
-
-    // console.log("🖱️ Line Clicked"); // ログ追加
-    selectNode(null); // 人物の選択は外す
-
-
-    const pos = getPointerPos(e);
-    const rect = container.getBoundingClientRect();
-    const clickX = pos.x - rect.left;
-    const clickY = pos.y - rect.top;
-
-    const allPoints = [getPointPosition(conn.start)];
-    conn.waypoints.forEach(wp => allPoints.push(wp));
-    allPoints.push(getPointPosition(conn.end));
-
-    let bestIndex = 0;
-    let minDetour = Infinity;
-
-    for (let i = 0; i < allPoints.length - 1; i++) {
-        const A = allPoints[i];
-        const B = allPoints[i + 1];
-        const distAC = Math.hypot(clickX - A.x, clickY - A.y);
-        const distCB = Math.hypot(B.x - clickX, B.y - clickY);
-        const distAB = Math.hypot(B.x - A.x, B.y - A.y);
-        const detour = (distAC + distCB) - distAB;
-
-        if (detour < minDetour) {
-            minDetour = detour;
-            bestIndex = i;
-        }
-    }
-
-    conn.waypoints.splice(bestIndex, 0, { x: clickX, y: clickY });
-    render();
-}
-*/
 
 // ====== グローバルイベント（マウス・タッチ共通） =====
 
@@ -2989,9 +2954,9 @@ function onLineClick(e, conn) {
         // Case 1: 線ラベル or ノード文字 のドラッグ（差分計算方式）
         if (dragInfo.type === 'conn-label' || dragInfo.type === 'node-text') {
 
-            // 前回位置からの差分(Delta)を計算
-            const dx = pos.x - dragOffset.x;
-            const dy = pos.y - dragOffset.y;
+            // ★変更：ズーム倍率で割って、ワールド座標での移動量を出す
+            const dx = (pos.x - dragOffset.x) / viewport.scale;
+            const dy = (pos.y - dragOffset.y) / viewport.scale;
 
             // 次回のために現在位置を保存
             dragOffset.x = pos.x;
@@ -3023,17 +2988,17 @@ function onLineClick(e, conn) {
                     if (editingNodeId === node.id) updatePreview(node);
                 }
             }
-            return; // ここで終了（下の処理には行かせない）
+            return; // ここで終了
         }
-
 
 
         // Case 2: それ以外
         
-        // ★修正：ノード移動（マルチセレクト対応）
+        // ノード移動（マルチセレクト対応）
         if (dragInfo.type === 'node') {
-            const dx = pos.x - dragOffset.x;
-            const dy = pos.y - dragOffset.y;
+            // ★変更：ここもズーム倍率で割る！
+            const dx = (pos.x - dragOffset.x) / viewport.scale;
+            const dy = (pos.y - dragOffset.y) / viewport.scale;
             
             dragOffset.x = pos.x;
             dragOffset.y = pos.y;
@@ -3052,18 +3017,14 @@ function onLineClick(e, conn) {
                 }
             });
             
-            // 2. ★追加：選択されている矢印の「関節」なども一緒に動かす！
+            // 2. 選択されている矢印の「関節」なども一緒に動かす
             selectedConnIds.forEach(id => {
                 const conn = connections.find(c => c.id === id);
                 if (conn) {
-                    // 関節(waypoints)を全部ずらす
                     conn.waypoints.forEach(wp => {
                         wp.x += dx;
                         wp.y += dy;
                     });
-                    
-                    // もし始点・終点がノード接続じゃなく「座標指定(point)」なら、それも動かす
-                    // (独立した矢印を動かすために必要よ！)
                     if (conn.start.type === 'point') { conn.start.x += dx; conn.start.y += dy; }
                     if (conn.end.type === 'point') { conn.end.x += dx; conn.end.y += dy; }
                 }
@@ -3073,10 +3034,13 @@ function onLineClick(e, conn) {
             return;
         }
 
-        // --- ハンドル・ウェイポイントの処理（既存のまま）---
-        // 絶対座標（ターゲット位置）を計算
-        const targetX = pos.x - dragOffset.x;
-        const targetY = pos.y - dragOffset.y;
+        // --- ハンドル・ウェイポイントの処理 ---
+        // ★変更：絶対座標（ターゲット位置）を計算するときも、スケールで補正が必要なの！
+        // 「画面上のマウス位置(pos.x)」から「コンテナの左上(dragOffset.x)」を引くと「画面上での距離」が出る。
+        // それを scale で割れば、「コンテナ内での本当の距離（ワールド座標）」になるわ。
+        const targetX = (pos.x - dragOffset.x) / viewport.scale;
+        const targetY = (pos.y - dragOffset.y) / viewport.scale;
+
         if (dragInfo.type === 'handle') {
             // ハンドル移動
             const conn = connections.find(c => c.id === dragInfo.connId);
@@ -3102,28 +3066,22 @@ function onLineClick(e, conn) {
         } else if (dragInfo.type === 'waypoint') {
 
             // 画面外に出たかチェック（削除判定）
-            const margin = 50; // 画面端から50px以内
+            const margin = 50; 
             const w = window.innerWidth;
             const h = window.innerHeight;
 
+            // ※削除判定は「画面上の見た目」で行うから、pos.x (生の座標) を使うのが正解よ
             if (pos.x < margin || pos.x > w - margin || pos.y < margin || pos.y > h - margin) {
-                // 範囲外に出た！削除実行！
                 const conn = connections.find(c => c.id === dragInfo.connId);
                 if (conn) {
                     conn.waypoints.splice(dragInfo.index, 1);
-
-                    // 即座に画面更新
                     render();
                     if (editingConnId === conn.id) updateConnPreview(conn);
-
-                    // 履歴保存
                     recordHistory();
                 }
-
-                // ★重要：ドラッグを強制終了させる（これ以上動かすとエラーになるから）
                 isDragging = false;
                 dragInfo = null;
-                return; // ここで処理を抜けるの！
+                return; 
             }
 
             // ウェイポイント移動
@@ -3133,27 +3091,20 @@ function onLineClick(e, conn) {
             let finalY = targetY;
 
             if (e.shiftKey) {
-                // ★修正：完全な直角（L字コーナー）を作るロジックに戻したわ！
+                // L字コーナー補正（ここも座標計算が必要だけど、targetX/Yが既に補正済みだからそのままでOK）
                 let prevData, nextData;
-
-                // 前の点
                 if (dragInfo.index === 0) prevData = conn.start;
                 else prevData = conn.waypoints[dragInfo.index - 1];
 
-                // 次の点
                 if (dragInfo.index === conn.waypoints.length - 1) nextData = conn.end;
                 else nextData = conn.waypoints[dragInfo.index + 1];
 
                 const prevPos = getPointPosition(prevData);
                 const nextPos = getPointPosition(nextData);
 
-                // 2つの「直角コーナー候補」を計算
-                // 候補1: 横に進んでから縦 (prev.yの高さで、next.xの位置へ)
                 const corner1 = { x: nextPos.x, y: prevPos.y };
-                // 候補2: 縦に進んでから横 (prev.xの位置で、next.yの高さへ)
                 const corner2 = { x: prevPos.x, y: nextPos.y };
 
-                // マウスに近い方のコーナーにパチッと吸着させるの！
                 const dist1 = Math.hypot(targetX - corner1.x, targetY - corner1.y);
                 const dist2 = Math.hypot(targetX - corner2.x, targetY - corner2.y);
 
@@ -3174,7 +3125,6 @@ function onLineClick(e, conn) {
 
     }, { passive: false });
 });
-
 
 // 終了（End）
 ['mouseup', 'touchend'].forEach(evtName => {
@@ -3669,8 +3619,9 @@ window.addEventListener('keydown', (e) => {
 
 // ★追加：ビューポートを更新する関数
 function updateViewport() {
-    // world-layer 全体を動かす魔法
-    container.style.transform = `translate(${viewport.x}px, ${viewport.y}px)`;
+    // world-layer 全体を動かす＆拡大縮小する魔法
+    // transform-origin は CSS で 0 0 に設定済みなので、左上基準で変形してから移動する計算になるわ
+    container.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
 }
 
 // ★追加：初期位置を「A4ガイドが画面ど真ん中」に来るようにセット
@@ -3871,6 +3822,43 @@ function finishSelection() {
         selectedConnId = Array.from(selectedConnIds).pop();
     }
 }
+
+// ====== ズーム機能（マウスホイール） ======
+
+canvasContainer.addEventListener('wheel', (e) => {
+    e.preventDefault(); // ブラウザ標準のスクロールを止める
+
+    // 1. ズーム感度の設定（Macのトラックパッドは移動量が小さいので少し敏感にする）
+    // e.deltaY がマイナスなら拡大、プラスなら縮小
+    const zoomIntensity = 0.001; 
+    let newScale = viewport.scale - (e.deltaY * zoomIntensity * viewport.scale); // 現在のscaleに比例させるとなめらか
+
+    // 2. 制限（10% 〜 500%）
+    newScale = Math.max(0.1, Math.min(newScale, 5.0));
+
+    // 3. マウス位置を中心にする計算（ここが数学！）
+    // マウスのスクリーン座標
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // 現在の「マウス位置に対応するワールド座標」を計算
+    // worldX = (mouseX - viewport.x) / oldScale
+    const worldMouseX = (mouseX - viewport.x) / viewport.scale;
+    const worldMouseY = (mouseY - viewport.y) / viewport.scale;
+
+    // 新しいスケールを適用
+    viewport.scale = newScale;
+
+    // 新しいスケールでも「マウス位置に対応するワールド座標」が同じ場所に来るように viewport.x/y を逆算
+    // mouseX = worldX * newScale + newViewportX
+    // newViewportX = mouseX - worldX * newScale
+    viewport.x = mouseX - worldMouseX * newScale;
+    viewport.y = mouseY - worldMouseY * newScale;
+
+    updateViewport();
+
+}, { passive: false }); // passive: false にしないと preventDefault できないブラウザがあるの
+
 
 // ====== スポットライト機能 ======
 
