@@ -85,7 +85,7 @@ let nodes = [
         id: "tutorial-box",
         type: 'box',
         x: 360, y: 470, // ガイド中央へ移動
-        label: "【基本操作】\n\n📝 部品編集: 右クリック\n🖐️ 移動: 背景ドラッグ\n📦 まとめて移動: 右クリック＋ドラッグ\n\n✨ 便利技:\n・線クリック: 曲がり角追加\n・線ダブルクリック: 曲がり角削除\n・Shiftドラッグ: 直角配置",
+        label: "【基本操作】\n\n📝 部品編集: 右クリック\n🖐️ キャンバス移動: 背景ドラッグ\n📦 まとめて選択: 右クリック＋ドラッグ\n\n✨ 便利技:\n・線クリック: 曲がり角追加\n・線ダブルクリック: 曲がり角削除\n・Shiftドラッグ: 直角配置",
         style: {
             width: 380, height: 180,
             borderColor: '#007bff',
@@ -159,7 +159,9 @@ let connections = [
 
 // 4. アプリ全体の保存用設定
 let appSettings = {
-    backgroundColor: '#f0f2f5' // 初期色
+    backgroundColor: '#f0f2f5', // 初期色
+    showGuide: true,
+    title: '人物相関図作成アプリ'
 };
 
 // ====== グローバル変数（追加分） ======
@@ -291,8 +293,8 @@ function createNodeElement(nodeData) {
     labelSpan.style.fontWeight = nodeData.text?.fontWeight || 'normal';
     labelSpan.style.textAlign = nodeData.text?.align || 'center';
     const textShd = nodeData.text?.shadow || 'none';
-    if (textShd === 'black') labelSpan.style.textShadow = '2px 2px 2px rgba(0,0,0,0.6)';
-    else if (textShd === 'white') labelSpan.style.textShadow = '0 0 4px white, 0 0 8px white';
+    if (textShd === 'black') labelSpan.style.textShadow = '1px 1px 2px rgba(0,0,0,0.6)';
+    else if (textShd === 'white') labelSpan.style.textShadow = '1px 1px 2px white';
     else labelSpan.style.textShadow = 'none';
     const txtBg = nodeData.text?.bgColor || 'transparent';
     labelSpan.style.backgroundColor = txtBg;
@@ -1276,7 +1278,6 @@ window.addEventListener('mouseup', () => {
 });
 
 
-// ====== ツールバー機能（画面中央生成対応版） ======
 
 // 便利関数：現在の画面中央（ワールド座標）を取得して、少しランダムにずらす
 function getVisibleCenterWithRandomOffset() {
@@ -1315,7 +1316,7 @@ document.getElementById('btn-add-conn').addEventListener('click', () => {
             arrow: 'end'
         },
         label: {
-            text: "新規の線",
+            text: "",
             fontSize: 12,
             color: '#333'
         }
@@ -1465,6 +1466,34 @@ document.getElementById('btn-delete').addEventListener('click', () => {
         recordHistory();
     }
 });
+
+// ====== ガイド切り替え機能（新規追加） ======
+const btnToggleGuide = document.getElementById('btn-toggle-guide');
+const artboardGuide = document.getElementById('artboard-guide');
+
+btnToggleGuide.addEventListener('click', () => {
+    // 設定を反転させる (true -> false, false -> true)
+    appSettings.showGuide = !appSettings.showGuide;
+    
+    // 見た目を更新
+    updateGuideVisibility();
+    
+    // 変更を履歴に保存
+    recordHistory();
+});
+
+// ガイドの見た目を設定に合わせて更新する関数
+function updateGuideVisibility() {
+    if (appSettings.showGuide) {
+        // 表示モード (ON)
+        artboardGuide.classList.remove('guide-hidden');
+        btnToggleGuide.classList.add('active'); // ボタンを凹ませる
+    } else {
+        // 非表示モード (OFF)
+        artboardGuide.classList.add('guide-hidden');
+        btnToggleGuide.classList.remove('active'); // ボタンを元に戻す
+    }
+}
 
 // ====== 背景色設定機能 ======
 
@@ -2386,8 +2415,7 @@ function refreshNodeStyle(node) {
     label.style.fontSize = (t.fontSize || 14) + 'px';
     label.style.fontWeight = t.fontWeight || 'normal';
     label.style.textAlign = t.align || 'center';
-    label.style.textShadow = (t.shadow === 'black') ? '2px 2px 2px rgba(0,0,0,0.6)' : (t.shadow === 'white' ? '0 0 4px white, 0 0 8px white' : 'none');
-    
+    label.style.textShadow = (t.shadow === 'black') ? '1px 1px 2px rgba(0,0,0,0.6)' : (t.shadow === 'white' ? '1px 1px 2px white' : 'none');
     const txtBgCol = t.bgColor || 'transparent';
     label.style.backgroundColor = txtBgCol;
     label.style.padding = (txtBgCol !== 'transparent') ? '2px 4px' : '0';
@@ -3063,7 +3091,8 @@ function registerInteraction(element, info) {
 }
 
 
-// ★書き換え：ドラッグ開始処理の完全版
+// ドラッグ開始処理の完全版
+// handlePointerDown 関数の書き換え
 function handlePointerDown(e, info) {
     if (e.type === 'touchstart') e.preventDefault();
 
@@ -3077,22 +3106,37 @@ function handlePointerDown(e, info) {
 
     // --- 分岐処理 ---
 
-    if (info.type === 'node') {
-        // [パターンA] ノード本体のドラッグ
+    // ★追加・変更：文字やラベルを掴んだとき、グループ選択中なら「ノード移動」にすり替える
+    let targetInfo = { ...info };
 
-        // まだ選択されていないノードを掴んだ場合
-        if (!selectedNodeIds.has(info.id)) {
-            selectNode(info.id);
+    if (info.type === 'node-text') {
+        // 掴んだ文字の親ノードが、すでに複数選択リストに入っているかチェック
+        if (selectedNodeIds.has(info.id) && selectedNodeIds.size > 1) {
+            targetInfo.type = 'node'; // グループ移動モードへ！
+        }
+    } else if (info.type === 'conn-label') {
+        // 掴んだラベルの線が、すでに選択リストに入っているかチェック
+        if (selectedConnIds.has(info.connId)) {
+            // 線が選ばれている、または他にも何か選ばれている場合は「ノード移動」と同じ差分移動をさせる
+            targetInfo.type = 'node'; 
+            targetInfo.id = info.connId; // ダミーIDとしてセット
+        }
+    }
+
+    if (targetInfo.type === 'node') {
+        // [パターンA] ノード本体、またはグループ化された要素のドラッグ
+
+        // まだ選択されていないノードを単体で掴んだ場合（targetInfo.id を使用）
+        if (targetInfo.id && !selectedNodeIds.has(targetInfo.id) && !selectedConnIds.has(targetInfo.id)) {
+            // info.type が node の時だけ選択し直す（文字からの昇格時は既存の選択を維持）
+            if (info.type === 'node') selectNode(targetInfo.id);
         } else {
-            // すでに選択されているノードを掴んだ場合
-            selectedId = info.id;
-            // ★重要：ここで render() を呼んではいけない！
-            // 呼ぶとDOMがリセットされてドラッグが途切れる原因になるの
+            selectedId = targetInfo.id;
         }
 
-        // メニュー更新
+        // メニュー更新（ノード単体クリック時などの利便性のため）
         const menu = document.getElementById('context-menu');
-        if (menu.style.display === 'block') {
+        if (menu.style.display === 'block' && info.id) {
             const node = nodes.find(n => n.id === info.id);
             if (node) {
                 const currentX = parseInt(menu.style.left) || 0;
@@ -3101,41 +3145,21 @@ function handlePointerDown(e, info) {
             }
         }
 
-        dragInfo = info;
-        // ★重要：移動ロジックを統一するため、ここでも「絶対座標」を記録する
+        dragInfo = targetInfo;
         dragOffset.x = pos.x;
         dragOffset.y = pos.y;
 
-
-        } else if (info.type === 'node-text') {
-        // [パターンB] ノード内の文字ドラッグ
-
-        // ★修正：選択状態に関わらず、文字を掴んだら「文字移動モード」にするわ！
-        // これでメインキャンバス上でも自由に文字位置を調整できるの。
-
-        // もし未選択のノードの文字をいきなり掴んだ場合は、一旦そのノードを選択状態にする
+    } else if (info.type === 'node-text') {
+        // [パターンB] 単体での文字移動（グループ選択されていない時）
         if (selectedId !== info.id) {
             selectNode(info.id);
-
-            // メニューが開いていたら更新（そのノードの内容に切り替え）
-            const menu = document.getElementById('context-menu');
-            if (menu.style.display === 'block') {
-                const node = nodes.find(n => n.id === info.id);
-                if (node) {
-                    const currentX = parseInt(menu.style.left) || 0;
-                    const currentY = parseInt(menu.style.top) || 0;
-                    openContextMenu(node, node.type === 'box' ? 'box' : 'node', currentX, currentY);
-                }
-            }
         }
-
-        // 純粋に「文字移動」として記録！
         dragInfo = info;
         dragOffset.x = pos.x;
         dragOffset.y = pos.y;
 
     } else if (info.type === 'conn-label') {
-        // [パターンC] 線ラベル
+        // [パターンC] 単体での線ラベル移動（グループ選択されていない時）
         if (selectedConnId !== info.connId) {
             selectNode(null);
             selectConnection(info.connId);
@@ -3145,7 +3169,7 @@ function handlePointerDown(e, info) {
         dragOffset.y = pos.y;
 
     } else {
-        // [パターンD] ハンドル・ウェイポイント
+        // [パターンD] ハンドル・ウェイポイント（既存のまま）
         if (selectedConnId !== info.connId) {
             selectNode(null);
             selectConnection(info.connId);
@@ -3464,6 +3488,9 @@ window.addEventListener('touchcancel', (e) => {
             selectNode(null);
             selectConnection(null);
             closeContextMenu();
+            // ★追加：サブメニューも閉じる
+            subToolbar.classList.remove('open');
+            btnMenuToggle.classList.remove('active');
         }
     });
 });
@@ -3984,16 +4011,28 @@ function recordHistory() {
 function restoreHistory(jsonString) {
     const data = JSON.parse(jsonString);
 
-    // データを書き戻す
     nodes = data.nodes;
     connections = data.connections;
     appSettings = data.appSettings;
 
-    // 画面を復元
-    refreshScreen(); // ノード・線を描画
+    // ガイド復元（前回のコード）
+    if (appSettings.showGuide === undefined) appSettings.showGuide = true;
+    
+    // タイトルの復元
+    if (!appSettings.title) appSettings.title = '人物相関図作成アプリ'; // 古いデータ用
+
+    const wm = document.getElementById('print-watermark');
+    if (wm) wm.textContent = appSettings.title;
+
+    // 入力欄とキャンバスの文字を同期
+    if (inputAppTitle) inputAppTitle.value = appSettings.title;
+    if (artboardTitleText) artboardTitleText.textContent = appSettings.title;
+
+    refreshScreen();
     document.body.style.backgroundColor = appSettings.backgroundColor;
     document.getElementById('tool-bg-picker').value = appSettings.backgroundColor;
     document.getElementById('tool-bg-hex').value = appSettings.backgroundColor;
+    updateGuideVisibility();
 }
 
 // アンドゥ実行
@@ -4082,6 +4121,11 @@ canvasContainer.addEventListener('mousedown', (e) => {
         selectNode(null);
         selectConnection(null);
         closeContextMenu();
+
+        const subToolbar = document.getElementById('sub-toolbar');
+        const btnMenuToggle = document.getElementById('btn-menu-toggle');
+        if (subToolbar) subToolbar.classList.remove('open');
+        if (btnMenuToggle) btnMenuToggle.classList.remove('active');
 
         canvasContainer.style.cursor = 'grabbing';
     }
@@ -4327,34 +4371,90 @@ window.addEventListener('mousemove', (e) => {
     spotlightLayer.style.setProperty('--y', e.clientY + 'px');
 });
 
-// ====== script.js (末尾に追加：保存・読み込み機能) ======
+
+// タイトル入力のイベントリスナー（ツールバー機能のあたりに追加）
+
+const inputAppTitle = document.getElementById('input-app-title');
+const artboardTitleText = document.getElementById('artboard-title-text');
+
+// 入力が確定した時（エンターキーやフォーカスが外れた時）に更新＆履歴保存
+inputAppTitle.addEventListener('change', (e) => {
+    const val = e.target.value;
+    
+    // 空っぽならデフォルトに戻す？ それとも空のまま？
+    // 今回は空なら「無題」とかにせず、そのまま反映させるね
+    appSettings.title = val;
+    
+    // 画面の文字を更新
+    if (artboardTitleText) {
+        artboardTitleText.textContent = val || 'タイトル'; // 空なら「タイトル」と表示
+    }
+    
+    // 印刷用の透かし文字も更新！
+    const wm = document.getElementById('print-watermark');
+    if (wm) wm.textContent = val || '';
+
+    recordHistory();
+});
+
+// キー入力中もリアルタイムで画面の文字が変わると楽しいかも？（お好みで！）
+inputAppTitle.addEventListener('input', (e) => {
+    if (artboardTitleText) {
+        artboardTitleText.textContent = e.target.value || 'タイトル';
+    }
+});
+
+
+// 印刷ボタン
+document.getElementById('btn-print').addEventListener('click', () => {
+    // 選択状態を解除してキレイにしてから印刷画面へ
+    selectNode(null);
+    selectConnection(null);
+    closeContextMenu();
+    
+    // ブラウザの印刷ダイアログを起動
+    window.print();
+});
+
 
 // 1. 保存機能
 document.getElementById('btn-save').addEventListener('click', () => {
-    // 保存するデータをまとめる
+    // 最新のタイトルを確実に取得
+    const currentTitle = appSettings.title || '人物相関図';
+
     const saveData = {
-        version: "0.5", // バージョン管理用
+        version: "0.5",
         timestamp: new Date().toISOString(),
         appSettings: appSettings,
         nodes: nodes,
         connections: connections
     };
 
-    // JSON文字列に変換
-    const jsonString = JSON.stringify(saveData, null, 2); // null, 2 で少し見やすく整形
-
-    // Blob（ファイルのようなもの）を作る
+    const jsonString = JSON.stringify(saveData, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
-
-    // ダウンロードリンクをこっそり作ってクリックする
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `relavas_data_${Date.now()}.json`; // ファイル名
-    link.click();
 
-    // 後始末
+    // ★ここがファイル名生成の魔法！
+    
+    // 1. ファイル名に使えない記号をアンダーバーに置換（安全対策）
+    const safeTitle = currentTitle.replace(/[\\/:*?"<>|]/g, '_');
+    
+    // 2. 日時フォーマット (YYYYMMDD-HHmm)
+    const now = new Date();
+    const dateStr = now.getFullYear() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0') + '-' +
+                    String(now.getHours()).padStart(2, '0') +
+                    String(now.getMinutes()).padStart(2, '0');
+
+    // 3. 結合！ (rilavas → relavas に揃えておくね。もし rilavas が良ければ書き換えて！)
+    link.download = `relavas_${safeTitle}_${dateStr}.json`; 
+    
+    link.click();
     URL.revokeObjectURL(link.href);
 });
+
 
 // 2. 読み込みボタン（隠しinputをクリック）
 document.getElementById('btn-load').addEventListener('click', () => {
@@ -4389,6 +4489,25 @@ document.getElementById('file-input').addEventListener('change', (e) => {
             refreshScreen();
             updateAppBackground(appSettings.backgroundColor);
 
+            // 読み込んだ設定に合わせて、ガイドの表示/非表示を切り替えるの！
+            if (typeof updateGuideVisibility === 'function') {
+                 updateGuideVisibility();
+            }
+            // データにタイトルがない場合（古いファイルなど）はデフォルトに戻す
+            if (!appSettings.title) appSettings.title = '人物相関図';
+
+            // 1. 入力欄に反映
+            const inputTitle = document.getElementById('input-app-title');
+            if (inputTitle) {
+                inputTitle.value = appSettings.title;
+            }
+
+            // 2. 印刷ガイドの横の文字に反映
+            const artboardTitle = document.getElementById('artboard-title-text');
+            if (artboardTitle) {
+                artboardTitle.textContent = appSettings.title;
+            }
+
             // 履歴にも保存（Undoできるように）
             recordHistory();
 
@@ -4406,8 +4525,28 @@ document.getElementById('file-input').addEventListener('change', (e) => {
     reader.readAsText(file);
 });
 
+// script.js
+
+// サブメニューの開閉制御
+const btnMenuToggle = document.getElementById('btn-menu-toggle');
+const subToolbar = document.getElementById('sub-toolbar');
+
+btnMenuToggle.addEventListener('click', (e) => {
+    e.stopPropagation(); // 親への伝播を止める（背景クリック判定と干渉しないように）
+    
+    // クラスを付け外しして表示切り替え
+    subToolbar.classList.toggle('open');
+    btnMenuToggle.classList.toggle('active');
+});
+
+// サブメニュー内をクリックしても閉じないようにする
+subToolbar.addEventListener('click', (e) => {
+    e.stopPropagation();
+});
+
 // ====== アプリ起動 ======
 initViewport(); // ★追加：最初に画面位置を合わせる！
 initNodes();
 render();
+updateGuideVisibility();
 recordHistory();

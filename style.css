@@ -61,12 +61,6 @@ html {
     /* A4横 (297mm x 210mm) @ 96dpi 換算 */
     width: 1123px; 
     height: 794px;
-    
-    /* ★変更点：背景を「うっすら半透明」にするわ！ */
-    /* rgba(255, 255, 255, 0.1) = 白色の透明度10% */
-    /* これなら背景色を変えても、その色が綺麗に透けて見えるの */
-    /* background-color: rgba(255, 255, 255, 0.1); */
-    
     /* ★変更点：範囲がはっきりわかるように、破線の枠をつけるわ */
     border: 2px dashed rgba(0, 0, 0, 0.2); 
     
@@ -78,6 +72,13 @@ html {
     left: 0;
     z-index: 0; 
     pointer-events: none; 
+    transition: opacity 0.3s ease;
+    opacity: 1; /* デフォルトは見えている状態 */
+}
+
+/* ★追加：ガイドを隠すときのクラス */
+#artboard-guide.guide-hidden {
+    opacity: 0;
 }
 
 /* ガイドのラベル（文字の色も少し調整しておいたわ） */
@@ -87,7 +88,6 @@ html {
     left: 0;
     font-size: 14px;
     color: #888; /* 背景に馴染む色に */
-    font-weight: bold;
     opacity: 0.7;
 }
 
@@ -315,31 +315,29 @@ html {
     /* クリックを邪魔しない */
 }
 
-
-
 /* ====== ツールバー ====== */
 #toolbar {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 1px;
+    right: 1px;
     left: auto; /* 左寄せ指定があれば解除 */
     background: white;
-    padding: 8px 12px 8px 4px; /* 左側のパディングを減らしてハンドルを詰め込む */
+    padding: 4px 6px; /* 左側のパディングを減らしてハンドルを詰め込む */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center; /* 上下中央揃え */
+    height: 32px; /* 高さを固定してスリムに */
     z-index: 100;
 }
 
-/* ★追加：ツールバーのドラッグハンドル */
 #toolbar-drag-handle {
     cursor: move;
     color: #bbb;
     font-weight: bold;
-    font-size: 16px;
-    padding: 0 6px;
+    font-size: 14px;
+    padding: 0 2px;
     user-select: none;
     line-height: 1;
     display: flex;
@@ -353,16 +351,19 @@ html {
 .tool-btn {
     background: #f8f9fa;
     border: 1px solid #ddd;
-    padding: 8px 12px;
+    padding: 4px 6px;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
     color: #555;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 6px;
+    height: 24px;     /* ボタンの高さを揃える */
+    min-width: 32px;  /* 絵文字ボタンが小さくなりすぎないように */
+    justify-content: center;
 }
 
 .tool-btn:hover {
@@ -371,8 +372,24 @@ html {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.tool-btn:active {
-    transform: translateY(0);
+/* クリック中(:active) と、ONの状態(.active) の両方に適用！ */
+.tool-btn:active,
+.tool-btn.active {
+    background-color: #5eff9c;   /* 鮮やかな緑色！ */
+    color: #ffffff;              /* アイコンは白抜き */
+    border-color: #4df98f;       /* 枠線も濃く */
+    
+    /* 内側に影を落として「凹み」を表現 */
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2); 
+    
+    /* 物理的に1px下げる */
+    transform: translateY(1px);
+}
+
+.tool-btn.active:hover {
+    background-color: #52df88;
+    transform: translateY(1px); /* ホバーしても浮き上がらせない（押しっぱなし表現） */
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
 }
 
 /* 無効化されたボタン */
@@ -388,21 +405,20 @@ html {
     background: #eee;
 }
 
-/* ====== ツールバー内の追加スタイル ====== */
 
 /* 区切り線 */
 .tool-separator {
     width: 1px;
-    height: 24px;
+    height: 16px;
     background-color: #ddd;
-    margin: 0 4px;
+    margin: 0 2px;
 }
 
 /* グループ化（背景設定など） */
 .tool-group {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
 }
 
 .tool-label {
@@ -425,9 +441,9 @@ html {
 
 /* HEX入力欄 */
 #tool-bg-hex {
-    width: 55px;
-    font-size: 11px;
-    padding: 4px;
+    width: 52px;
+    font-size: 12px;
+    padding: 2px;
     border: 1px solid #ddd;
     border-radius: 4px;
     text-align: center;
@@ -439,11 +455,35 @@ html {
     outline: none;
 }
 
+
 /* 削除ボタン（赤系） */
 .tool-btn.danger:hover {
     background: #ffebe9;
     color: #d93025;
     border-color: #d93025;
+}
+
+
+/* タイトル入力欄 */
+#input-app-title {
+    width: 50px; /* 十分な長さを確保 */
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#input-app-title:focus {
+    border-color: #007bff;
+    background: white;
+}
+
+/* プレースホルダーの色（少し薄く） */
+#input-app-title::placeholder {
+    color: #ccc;
 }
 
 /* 選択されたノードのスタイル（青枠で強調） */
@@ -948,6 +988,14 @@ html {
     left: 42px;  /* 1つ目の隣へ (6px + 32px + 4px隙間) */
 }
 
+/* メニュー内の区切り線（新しく追加） */
+.menu-hr {
+    border: none;
+    height: 1px;
+    background-color: #e1e4e8; /* 既存のデザインに合わせた薄いグレー */
+    margin: 10px 0;            /* 上下に少し余白を持たせる */
+    width: 100%;
+}
 
 /* ====== マルチボックス用追加スタイル ====== */
 
@@ -1130,6 +1178,65 @@ body.presentation-mode #zoom-controls * {
     cursor: auto !important; /* ここは通常のカーソルに戻す */
 }
 
+
+/* style.css */
+
+/* メニュー開閉ボタン（ちょっと目立たせる？） */
+#btn-menu-toggle {
+    font-size: 16px;
+    padding: 0 8px;
+}
+#btn-menu-toggle.active {
+    background-color: #333;
+    color: white;
+    border-color: #333;
+}
+
+/* ★サブツールバー（隠し部屋）のデザイン */
+#sub-toolbar {
+    display: none; /* 最初は隠す */
+    position: absolute;
+    top: 40px; /* メインバーのすぐ下 */
+    right: 0;  /* 右端に揃える */
+    width: 260px; /* 少し広めに */
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    padding: 10px;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000; /* 最前面 */
+}
+
+/* メニューが開いているとき */
+#sub-toolbar.open {
+    display: flex;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* サブメニュー内の行レイアウト */
+.sub-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-start; /* 左寄せ */
+}
+
+/* サブメニュー内の区切り線 */
+.sub-toolbar-separator {
+    height: 1px;
+    background: #eee;
+    margin: 4px 0;
+    width: 100%;
+}
+
+/* タイトル入力欄をサブメニュー内で少し広げる */
+#input-app-title {
+    flex: 1; /* 横幅いっぱいに */
+    width: auto; /* width固定を解除 */
+}
+
 /* ====== 新UI：タブ式メニューのデザイン ====== */
 
 /* タブの入れ物 */
@@ -1181,4 +1288,89 @@ body.presentation-mode #zoom-controls * {
 /* 矢印パネル表示時はタブを隠すためのクラス */
 .tab-hidden {
     display: none !important;
+}
+
+
+/* ====== 印刷・PDF保存用の設定 ====== */
+@media print {
+    /* 用紙設定：A4横向き、余白なし */
+    @page {
+        size: A4 landscape;
+        margin: 0;
+    }
+
+    /* 全体のリセット */
+    body, html {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: white !important; /* 背景は白く */
+        -webkit-print-color-adjust: exact; /* 背景色などを忠実に出力 */
+        /* ★これを追加してね！（標準仕様） */
+        print-color-adjust: exact;
+        overflow: hidden; /* 余計なスクロールバーを消す */
+    }
+
+    /* 邪魔なものを消す（ツールバー、メニュー、ズーム操作など） */
+    #toolbar, 
+    #ui-layer, 
+    #context-menu, 
+    #spotlight-layer,
+    .resize-handle, 
+    .line-handle, 
+    .waypoint,
+    .snap-marker, 
+    .artboard-label /* 上についてるガイド用の文字も消す */
+    {
+        display: none !important;
+    }
+
+    /* キャンバスの位置を強制リセット（ズームしててもA4ピッタリにする） */
+    #canvas-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1123px; /* A4横サイズ */
+        height: 794px;
+        overflow: hidden; /* はみ出した部分はカット */
+        z-index: 1;
+    }
+
+    #world-layer {
+        /* JSで設定されたズームや移動を無効化 */
+        transform: none !important; 
+        top: 0 !important;
+        left: 0 !important;
+        position: absolute;
+    }
+
+    /* A4ガイド枠（破線）を消す */
+    #artboard-guide {
+        border: none !important;
+        opacity: 1 !important; /* 表示設定がOFFでも、枠の中身(透かし)は出すために透明度は戻す */
+    }
+    
+    /* ガイド枠そのものは消すけど、中身（ノードとか）は表示したい。
+       border: none で線だけ消えるからOK！ */
+
+    /* 透かし（ウォーターマーク）を表示 */
+    #print-watermark {
+        display: block !important; /* 普段は display: none 推奨だけど、後で設定するわ */
+        position: absolute;
+        bottom: 10px;
+        right: 20px;
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.3); /* 薄いグレーで透かしっぽく */
+        font-weight: bold;
+        font-family: sans-serif;
+        z-index: 9999; /* 一番上に */
+    }
+    
+    /* ノードの影とかは印刷だと重くなることがあるけど、今回はそのままのリッチな見た目でいくわ！ */
+}
+
+/* ★重要：普段の画面では透かしを隠しておく */
+#print-watermark {
+    display: none;
 }

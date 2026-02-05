@@ -4,45 +4,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RelaVas v0.4 - Anchor System</title>
+    <title>RelaVas v1.0 - 相関図作成 -</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
 
-
     <div id="toolbar">
         <div id="toolbar-drag-handle" title="ドラッグして移動">⋮⋮</div>
-        <button id="btn-add-node" class="tool-btn" title="人物を追加">＋ 人物</button>
-        <button id="btn-add-conn" class="tool-btn" title="矢印を追加">＋ 矢印</button>
-        <button id="btn-add-box" class="tool-btn" title="ボックスを追加">＋ マルチボックス</button>
+
+        <button id="btn-add-node" class="tool-btn" title="人物を追加">＋人物</button>
+        <button id="btn-add-conn" class="tool-btn" title="矢印を追加">＋矢印</button>
+        <button id="btn-add-box" class="tool-btn" title="ボックスを追加">＋BOX</button>
 
         <div class="tool-separator"></div>
-        <div class="tool-group" title="背景色を変更">
-            <span class="tool-label">背景</span>
-            <input type="color" id="tool-bg-picker" value="#f0f2f5">
-            <input type="text" id="tool-bg-hex" value="#f0f2f5" maxlength="7">
-        </div>
 
-        <div class="tool-separator"></div>
         <button id="btn-undo" class="tool-btn" title="元に戻す" disabled>↩️</button>
         <button id="btn-redo" class="tool-btn" title="やり直す" disabled>↪️</button>
+
         <div class="tool-separator"></div>
-        <button id="btn-spotlight" class="tool-btn" title="スポットライト">🔦</button>
-        <div class="tool-separator"></div>
-        <button id="btn-save" class="tool-btn" title="ファイルに保存">💾 保存</button>
-        <button id="btn-load" class="tool-btn" title="ファイルを開く">📂 開く</button>
-        <input type="file" id="file-input" accept=".json" style="display: none;">
-        <div class="tool-separator"></div>
-        <button id="btn-delete" class="tool-btn danger" title="選択した項目を削除">🗑️ 削除</button>
+
+        <button id="btn-menu-toggle" class="tool-btn" title="メニューを開く">≡</button>
+
+        <div id="sub-toolbar">
+
+            <div class="sub-toolbar-row">
+                <div class="tool-group" title="背景色を変更" style="width: 100%;">
+                    <span class="tool-label">背景</span>
+                    <input type="color" id="tool-bg-picker" value="#f0f2f5">
+                    <input type="text" id="tool-bg-hex" value="#f0f2f5" maxlength="7">
+                    <span style="font-size: 10px; color: #999; margin-left: auto;">※印刷反映なし</span>
+                </div>
+            </div>
+
+            <div class="sub-toolbar-separator"></div>
+            <div class="sub-toolbar-row">
+                <button id="btn-toggle-guide" class="tool-btn active" title="ガイドの表示/非表示">📏A4ガイド</button>
+                <div class="tool-separator"></div>
+                <button id="btn-spotlight" class="tool-btn" title="スポットライト">🔦スポット</button>
+            </div>
+
+            <div class="sub-toolbar-separator"></div>
+
+            <div class="sub-toolbar-row">
+                <span class="tool-label">題名</span>
+                <input type="text" id="input-app-title" placeholder="タイトル">
+            </div>
+
+            <div class="sub-toolbar-separator"></div>
+
+            <div class="sub-toolbar-row">
+                <button id="btn-print" class="tool-btn" title="印刷 / PDF保存">🖨️印刷</button>
+                <div class="tool-separator"></div>
+                <button id="btn-save" class="tool-btn" title="ファイルに保存">💾保存</button>
+                <button id="btn-load" class="tool-btn" title="ファイルを開く">📂開く</button>
+                <input type="file" id="file-input" accept=".json" style="display: none;">
+            </div>
+
+            <div class="sub-toolbar-separator"></div>
+
+            <div class="sub-toolbar-row">
+                <button id="btn-delete" class="tool-btn danger" style="width:100%" title="選択した項目を削除">🗑️ 選択部品削除</button>
+            </div>
+        </div>
     </div>
 
     <div id="canvas-container">
         <div id="world-layer">
 
             <div id="artboard-guide">
-                <div class="artboard-label">A4 Size (横) RelaVas-人物相関図作成アプリ-</div>
+                <div class="artboard-label">
+                    A4 Size (横) RelaVas - <span id="artboard-title-text">人物相関図作成アプリ</span> -
+                </div>
+                <div id="print-watermark">人物相関図作成アプリ</div>
             </div>
 
             <svg id="svg-layer">
@@ -102,8 +137,8 @@
         </div>
 
         <div id="node-tabs" class="tab-nav">
-            <button class="tab-btn active" data-target="tab-text">📝 テキスト</button>
-            <button class="tab-btn" data-target="tab-style">🎨 スタイル</button>
+            <button class="tab-btn active" data-target="tab-style">🎨 スタイル</button>
+            <button class="tab-btn" data-target="tab-text">📝 テキスト</button>
             <button class="tab-btn" data-target="tab-image">📷 画像</button>
         </div>
 
@@ -111,21 +146,11 @@
 
             <div id="panel-node-common">
 
-                <div id="tab-text" class="tab-content active">
+                <div id="tab-text" class="tab-content">
                     <div class="menu-section" style="align-items: flex-start;">
-                        <label class="menu-label" style="margin-top:4px;">内容</label>
+                        <label class="menu-label" style="margin-top:4px;">文字</label>
                         <textarea id="input-label" rows="3" placeholder="テキストを入力..."
                             style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical; font-family: sans-serif;"></textarea>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">配置</label>
-                        <div class="toggle-group" id="toggle-align" style="width:100%">
-                            <button data-val="left" style="flex:1">左</button>
-                            <button data-val="center" style="flex:1">中</button>
-                            <button data-val="right" style="flex:1">右</button>
-                        </div>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">文字色</label>
-                        <div id="palette-text" class="color-palette"></div>
                     </div>
                     <div class="menu-section"><label class="menu-label">サイズ</label>
                         <div class="input-row">
@@ -137,9 +162,12 @@
                             <button id="btn-font-bold" class="icon-btn" title="太字">B</button>
                         </div>
                     </div>
-                    <div class="menu-section"><label class="menu-label">背景色</label>
-                        <div id="palette-text-bg" class="color-palette"></div>
+
+                    <div class="menu-section"><label class="menu-label">文字色</label>
+                        <div id="palette-text" class="color-palette"></div>
                     </div>
+                    <hr class="menu-hr">
+
                     <div class="menu-section"><label class="menu-label">文字影</label>
                         <div id="toggle-text-shadow" class="toggle-group" style="width:100%">
                             <button data-val="none" style="flex:1">なし</button>
@@ -147,23 +175,25 @@
                             <button data-val="white" style="flex:1">白</button>
                         </div>
                     </div>
+                    <div class="menu-section"><label class="menu-label">配置</label>
+                        <div class="toggle-group" id="toggle-align" style="width:100%">
+                            <button data-val="left" style="flex:1">左</button>
+                            <button data-val="center" style="flex:1">中</button>
+                            <button data-val="right" style="flex:1">右</button>
+                        </div>
+                    </div>
+                    <hr class="menu-hr">
+                    <div class="menu-section"><label class="menu-label">背景色</label>
+                        <div id="palette-text-bg" class="color-palette"></div>
+                    </div>
                 </div>
 
-                <div id="tab-style" class="tab-content">
+                <div id="tab-style" class="tab-content active">
                     <div class="menu-section"><label class="menu-label">サイズ</label>
                         <div class="size-inputs">
                             <input type="number" id="input-width" value="120" title="幅">
                             <span style="align-self:center;">×</span>
                             <input type="number" id="input-height" value="60" title="高さ">
-                        </div>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">塗り</label>
-                        <div id="palette-bg" class="color-palette"></div>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">透過率</label>
-                        <div class="input-row">
-                            <input type="range" id="input-opacity" min="0" max="100" value="100" style="flex:1;">
-                            <span id="val-opacity" style="width:30px; text-align:right; font-size:11px;">100%</span>
                         </div>
                     </div>
                     <div class="menu-section"><label class="menu-label">角の丸み</label>
@@ -172,10 +202,7 @@
                             <span id="val-radius" style="width:30px; text-align:right; font-size:11px;">0%</span>
                         </div>
                     </div>
-                    <div class="menu-section"><label class="menu-label">枠線</label>
-                        <div id="palette-border" class="color-palette"></div>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">枠設定</label>
+                    <div class="menu-section"><label class="menu-label">太さ/線種</label>
                         <div class="input-row">
                             <input type="number" id="input-border-width" value="2" min="0" title="太さ">
                             <div class="toggle-group" id="toggle-border-style" style="flex:1; margin-left:4px;">
@@ -184,6 +211,21 @@
                             </div>
                         </div>
                     </div>
+                    <div class="menu-section"><label class="menu-label">枠線色</label>
+                        <div id="palette-border" class="color-palette"></div>
+                    </div>
+                    <hr class="menu-hr">
+
+                    <div class="menu-section"><label class="menu-label">塗り色</label>
+                        <div id="palette-bg" class="color-palette"></div>
+                    </div>
+                    <div class="menu-section"><label class="menu-label">透過率</label>
+                        <div class="input-row">
+                            <input type="range" id="input-opacity" min="0" max="100" value="100" style="flex:1;">
+                            <span id="val-opacity" style="width:30px; text-align:right; font-size:11px;">100%</span>
+                        </div>
+                    </div>
+
                     <div class="menu-section"><label class="menu-label">箱の影</label>
                         <div id="toggle-box-shadow" class="toggle-group" style="width:100%">
                             <button data-val="none" style="flex:1">なし</button>
@@ -227,8 +269,11 @@
                 </div>
 
                 <div id="tab-conn-style" class="tab-content active">
-                    <div class="menu-section"><label class="menu-label">線の色</label>
-                        <div id="palette-conn-stroke" class="color-palette"></div>
+                    <div class="menu-section"><label class="menu-label">矢印</label>
+                        <div class="toggle-group" id="toggle-conn-arrow" style="width: 100%;"><button data-val="none"
+                                style="flex:1;">なし</button><button data-val="start" style="flex:1;">←</button><button
+                                data-val="end" style="flex:1;">→</button><button data-val="both"
+                                style="flex:1;">⇄</button></div>
                     </div>
                     <div class="menu-section"><label class="menu-label">太さ</label>
                         <div class="input-row"><input type="number" id="input-conn-width" value="2" min="1">
@@ -236,31 +281,21 @@
                                     data-val="4">中</button><button data-val="6">太</button></div>
                         </div>
                     </div>
-                    <div class="menu-section"><label class="menu-label">形状</label>
+                    <div class="menu-section"><label class="menu-label">線種</label>
                         <div class="toggle-group" id="toggle-conn-dash" style="width: 100%;"><button data-val="solid"
                                 style="flex:1;">実線</button><button data-val="dashed" style="flex:1;">破線</button></div>
                     </div>
-                    <div class="menu-section"><label class="menu-label">矢印</label>
-                        <div class="toggle-group" id="toggle-conn-arrow" style="width: 100%;"><button data-val="none"
-                                style="flex:1;">なし</button><button data-val="start" style="flex:1;">←</button><button
-                                data-val="end" style="flex:1;">→</button><button data-val="both"
-                                style="flex:1;">⇄</button></div>
+                    <div class="menu-section"><label class="menu-label">線の色</label>
+                        <div id="palette-conn-stroke" class="color-palette"></div>
                     </div>
+
                 </div>
 
                 <div id="tab-conn-label" class="tab-content">
                     <div class="menu-section" style="align-items: flex-start;">
                         <label class="menu-label" style="margin-top:4px;">内容</label>
-                        <textarea id="input-conn-label" rows="2" placeholder="関係名..."
+                        <textarea id="input-conn-label" rows="2" placeholder="ラベル..."
                             style="width: 100%; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">方向</label>
-                        <div class="toggle-group" id="toggle-conn-vertical" style="width: 100%;"><button
-                                data-val="horizontal" style="flex:1;">横書き</button><button data-val="vertical"
-                                style="flex:1;">縦書き</button></div>
-                    </div>
-                    <div class="menu-section"><label class="menu-label">文字色</label>
-                        <div id="palette-conn-text" class="color-palette"></div>
                     </div>
                     <div class="menu-section"><label class="menu-label">サイズ</label>
                         <div class="input-row"><input type="number" id="input-conn-font-size" value="12" min="8"><span
@@ -270,6 +305,16 @@
                                 id="btn-conn-bold" class="icon-btn" title="太字">B</button>
                         </div>
                     </div>
+                    <div class="menu-section"><label class="menu-label">文字色</label>
+                        <div id="palette-conn-text" class="color-palette"></div>
+                    </div>
+                    <div class="menu-section"><label class="menu-label">方向</label>
+                        <div class="toggle-group" id="toggle-conn-vertical" style="width: 100%;"><button
+                                data-val="horizontal" style="flex:1;">横書き</button><button data-val="vertical"
+                                style="flex:1;">縦書き</button></div>
+                    </div>
+                    <hr class="menu-hr">
+
                     <div class="menu-section"><label class="menu-label">文字背景</label>
                         <div id="palette-conn-bg" class="color-palette"></div>
                     </div>
