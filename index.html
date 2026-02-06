@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RelaVas v1.0 - 相関図作成 -</title>
+    <title>RelaVas v1.0 - 相関図作成 -</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="RelaVasIco.png" type="image/png">
+    <link rel="apple-touch-icon" href="RelaVasIco.png">
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -330,6 +334,15 @@
     <div id="spotlight-layer"></div>
 
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('Service Worker registered.', reg))
+                    .catch((err) => console.log('Service Worker registration failed.', err));
+            });
+        }
+    </script>
 </body>
 
 </html>
