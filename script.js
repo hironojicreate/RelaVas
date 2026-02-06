@@ -340,18 +340,28 @@ function createNodeElement(nodeData) {
 }
 
 // ★追加：線を選択する関数
+// ★書き換え：線を選択する関数（トグル対応）
 function selectConnection(id, addToSelection = false) {
-    // 追加選択モードじゃないなら、一旦リセット
+    // 通常クリック(addToSelection=false)なら、一旦リセット
     if (!addToSelection) {
+        // もし「今まさに選ばれている線」を単独クリックしただけなら、何もしないで終わる手もあるけど、
+        // ここではシンプルに「他を解除してこれだけ選ぶ」動きにするわ
         selectedConnIds.clear();
-        selectedNodeIds.clear(); // 線を選ぶときはノード選択も解除するのが一般的
+        selectedNodeIds.clear();
         document.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
         selectedId = null;
     }
 
     if (id) {
-        selectedConnIds.add(id);
-        selectedConnId = id; // プロパティパネル用（最後の1つ）
+        // ★トグル処理：追加モードの時、もし既に選ばれていたら「解除」する
+        if (addToSelection && selectedConnIds.has(id)) {
+            selectedConnIds.delete(id);
+            if (selectedConnId === id) selectedConnId = null;
+        } else {
+            // まだ選ばれていない、または通常選択なら「追加」
+            selectedConnIds.add(id);
+            selectedConnId = id; // プロパティパネル用
+        }
     } else {
         selectedConnId = null;
     }
@@ -359,34 +369,41 @@ function selectConnection(id, addToSelection = false) {
     render(); // 画面更新
 }
 
-// selectNode 関数（書き換え）
-
+// selectNode 関数（トグル対応書き換え）
 function selectNode(id, addToSelection = false) {
-    // addToSelection が false (通常クリック) なら、他の選択を解除
+    // 通常クリックなら、他の選択を解除
     if (!addToSelection) {
         selectedNodeIds.clear();
-
-        // ★修正ポイント：線の選択リスト（Set）もここで確実に消すの！
         selectedConnIds.clear();
         selectedConnId = null;
-
-        // DOM上のクラスも全部消す
         document.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
     }
 
-    selectedId = id; // プロパティパネル用（最後に選んだやつ）
-
     if (id) {
-        // ★修正ポイント：上で消したから、ここの if (!addToSelection) selectedConnId = null; は不要になったわ
-
-        selectedNodeIds.add(id);
-        const el = document.getElementById(id);
-        if (el) el.classList.add('selected');
+        // ★トグル処理
+        if (addToSelection && selectedNodeIds.has(id)) {
+            // 既に選ばれていたら解除
+            selectedNodeIds.delete(id);
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('selected');
+            
+            // プロパティパネル用のIDがこれだった場合、選択解除に伴ってnullにするか、
+            // 他に選ばれているものがあればそれに移すのが親切だけど、一旦nullで。
+            if (selectedId === id) selectedId = null;
+            
+        } else {
+            // 追加
+            selectedNodeIds.add(id);
+            selectedId = id; // 最後に選んだものとして記録
+            const el = document.getElementById(id);
+            if (el) el.classList.add('selected');
+        }
+    } else {
+        selectedId = null;
     }
 
     render(); // 線の選択状態などを更新
 }
-
 
 // ====== プレビュー内テキストのドラッグ ======
 
@@ -3098,43 +3115,49 @@ function handlePointerDown(e, info) {
 
     const pos = getPointerPos(e);
 
-    // 長押しタイマー
     longPressTimer = setTimeout(() => { }, 500);
 
     isDragging = true;
     currentDragTarget = e.target;
 
-    // --- 分岐処理 ---
+    // ★Shiftキー判定
+    const isShift = e.shiftKey;
 
-    // ★追加・変更：文字やラベルを掴んだとき、グループ選択中なら「ノード移動」にすり替える
     let targetInfo = { ...info };
 
     if (info.type === 'node-text') {
-        // 掴んだ文字の親ノードが、すでに複数選択リストに入っているかチェック
         if (selectedNodeIds.has(info.id) && selectedNodeIds.size > 1) {
-            targetInfo.type = 'node'; // グループ移動モードへ！
+            targetInfo.type = 'node';
         }
     } else if (info.type === 'conn-label') {
-        // 掴んだラベルの線が、すでに選択リストに入っているかチェック
         if (selectedConnIds.has(info.connId)) {
-            // 線が選ばれている、または他にも何か選ばれている場合は「ノード移動」と同じ差分移動をさせる
             targetInfo.type = 'node'; 
-            targetInfo.id = info.connId; // ダミーIDとしてセット
+            targetInfo.id = info.connId; 
         }
     }
 
     if (targetInfo.type === 'node') {
-        // [パターンA] ノード本体、またはグループ化された要素のドラッグ
-
-        // まだ選択されていないノードを単体で掴んだ場合（targetInfo.id を使用）
-        if (targetInfo.id && !selectedNodeIds.has(targetInfo.id) && !selectedConnIds.has(targetInfo.id)) {
-            // info.type が node の時だけ選択し直す（文字からの昇格時は既存の選択を維持）
-            if (info.type === 'node') selectNode(targetInfo.id);
-        } else {
-            selectedId = targetInfo.id;
+        // [パターンA] ノード本体操作
+        
+        // ★ここを修正：Shiftキーが押されているか、まだ選ばれていないなら選択処理へ
+        // (既に選ばれているものをShiftなしでドラッグする場合は、選択解除しちゃダメだからね)
+        
+        if (targetInfo.id) {
+            if (isShift) {
+                // Shift時はトグル選択（ドラッグは開始しないかもしれないけど、一旦selectNodeに任せる）
+                // ただしドラッグ操作と競合しないように、「クリックした瞬間」に切り替える
+                selectNode(targetInfo.id, true);
+            } else {
+                // Shiftなし：まだ選ばれていないなら、これ「だけ」を選択
+                if (!selectedNodeIds.has(targetInfo.id) && !selectedConnIds.has(targetInfo.id)) {
+                    selectNode(targetInfo.id);
+                }
+                // 既に選ばれているなら、選択状態は維持（グループドラッグのため）
+                selectedId = targetInfo.id;
+            }
         }
 
-        // メニュー更新（ノード単体クリック時などの利便性のため）
+        // メニュー更新
         const menu = document.getElementById('context-menu');
         if (menu.style.display === 'block' && info.id) {
             const node = nodes.find(n => n.id === info.id);
@@ -3150,29 +3173,29 @@ function handlePointerDown(e, info) {
         dragOffset.y = pos.y;
 
     } else if (info.type === 'node-text') {
-        // [パターンB] 単体での文字移動（グループ選択されていない時）
+        // [パターンB] 単体文字
         if (selectedId !== info.id) {
-            selectNode(info.id);
+            selectNode(info.id, isShift); // Shift対応
         }
         dragInfo = info;
         dragOffset.x = pos.x;
         dragOffset.y = pos.y;
 
     } else if (info.type === 'conn-label') {
-        // [パターンC] 単体での線ラベル移動（グループ選択されていない時）
+        // [パターンC] 線ラベル
         if (selectedConnId !== info.connId) {
-            selectNode(null);
-            selectConnection(info.connId);
+            if (!isShift) selectNode(null); // Shiftなしなら他をクリア
+            selectConnection(info.connId, isShift);
         }
         dragInfo = info;
         dragOffset.x = pos.x;
         dragOffset.y = pos.y;
 
     } else {
-        // [パターンD] ハンドル・ウェイポイント（既存のまま）
+        // [パターンD] ハンドルなど
         if (selectedConnId !== info.connId) {
-            selectNode(null);
-            selectConnection(info.connId);
+            if (!isShift) selectNode(null);
+            selectConnection(info.connId, isShift);
         }
         dragInfo = info;
         const rect = container.getBoundingClientRect();
@@ -3182,21 +3205,26 @@ function handlePointerDown(e, info) {
 }
 
 // ★新規追加：線の直線部分を押したときの処理
-// ★修正：線の直線部分を押したときの処理（ズーム対応＆右クリ修正版）
+// ★修正：線の直線部分を押したときの処理
 function handleLineMouseDown(e, conn) {
-    // 1. 右クリック暴発防止（右クリックは button 2 なの）
-    // 左クリック(0)以外は、ここで帰ってもらうわ！
     if (e.button !== 0) return;
 
-    if (e.shiftKey) return; // Shiftキーの機能（もしあれば）を阻害しないように
-    e.stopPropagation(); // 背景クリックなどを防ぐ
+    // ★削除：Shiftキーでリターンする処理を消しました
+    // if (e.shiftKey) return; 
 
-    // 2. 未選択なら「選択」するだけ（ドラッグは開始しない）
+    e.stopPropagation();
+
+    // ★Shiftキーならトグル選択だけして帰る（関節追加はしない）
+    if (e.shiftKey) {
+        selectConnection(conn.id, true); // true = トグルモード
+        return;
+    }
+
+    // 2. 未選択なら「選択」するだけ
     if (selectedConnId !== conn.id) {
         selectNode(null);
         selectConnection(conn.id);
 
-        // メニューが開いていれば切り替え
         const menu = document.getElementById('context-menu');
         if (menu.style.display === 'block') {
             const currentX = parseInt(menu.style.left) || 0;
@@ -3206,17 +3234,11 @@ function handleLineMouseDown(e, conn) {
         return;
     }
 
-    // 3. 選択済みなら「関節を追加」して「即ドラッグ開始」！
-
+    // 3. 選択済みなら「関節を追加」して「即ドラッグ開始」
     const pos = getPointerPos(e);
-
-    // ★ここが修正のキモ！
-    // 画面上のマウス位置(pos)から、viewport(視点)のズレを引いて、
-    // さらに scale(倍率) で割ることで、正しい「ワールド座標」を出すの。
     const clickX = (pos.x - viewport.x) / viewport.scale;
     const clickY = (pos.y - viewport.y) / viewport.scale;
 
-    // 挿入位置の計算
     const allPoints = [getPointPosition(conn.start)];
     conn.waypoints.forEach(wp => allPoints.push(wp));
     allPoints.push(getPointPosition(conn.end));
@@ -3227,8 +3249,6 @@ function handleLineMouseDown(e, conn) {
     for (let i = 0; i < allPoints.length - 1; i++) {
         const A = allPoints[i];
         const B = allPoints[i + 1];
-
-        // ここで計算する距離も、補正後の clickX, clickY を使うから正確になるわ
         const distAC = Math.hypot(clickX - A.x, clickY - A.y);
         const distCB = Math.hypot(B.x - clickX, B.y - clickY);
         const distAB = Math.hypot(B.x - A.x, B.y - A.y);
@@ -3240,23 +3260,16 @@ function handleLineMouseDown(e, conn) {
         }
     }
 
-    // 関節を追加（補正済みの座標を使うから、カーソルの真下にできる！）
     conn.waypoints.splice(bestIndex, 0, { x: clickX, y: clickY });
-
-    // 画面更新
     render();
     if (editingConnId === conn.id) updateConnPreview(conn);
 
-    // ドラッグ開始
     isDragging = true;
     dragInfo = {
         type: 'waypoint',
         connId: conn.id,
         index: bestIndex
     };
-
-    // ★重要：mousemoveでの計算用オフセット
-    // ここも rect.left ではなく viewport.x を使うことで統一するわ
     dragOffset.x = viewport.x;
     dragOffset.y = viewport.y;
 }
@@ -4108,16 +4121,19 @@ function initViewport() {
 
 // 背景（canvasContainer）でのマウスダウン
 canvasContainer.addEventListener('mousedown', (e) => {
-    // ツールバーやメニューの上なら何もしない
+    // ツールバー等は無視
     if (e.target.closest('#toolbar') || e.target.closest('#ui-layer') || e.target.closest('#context-menu')) return;
 
+    // ★追加：Shiftキーが押されていたらパン機能は発動させない！（範囲選択に譲る）
+    if (e.shiftKey) return; 
+
     if (e.button !== 0) return;
-    // 背景、またはSVG背景(線がないところ)、またはガイド枠をクリックした時
+    
+    // 背景などをクリックした時
     if (e.target === canvasContainer || e.target === svgLayer || e.target.id === 'artboard-guide' || e.target === container) {
         isPanning = true;
         panStart = { x: e.clientX, y: e.clientY };
 
-        // 選択解除
         selectNode(null);
         selectConnection(null);
         closeContextMenu();
@@ -4167,19 +4183,20 @@ canvasContainer.addEventListener('contextmenu', (e) => {
 
 // 範囲選択の開始（mousedown）
 canvasContainer.addEventListener('mousedown', (e) => {
-    // 右クリック(button 2) かつ、背景などをクリックした時
-    if (e.button === 2 && (e.target === canvasContainer || e.target === svgLayer || e.target === container || e.target.id === 'artboard-guide')) {
+    // ★修正：右クリック(2) または、Shift+左クリック(0) で発動！
+    const isRightClick = (e.button === 2);
+    const isShiftLeft = (e.shiftKey && e.button === 0);
+
+    if ((isRightClick || isShiftLeft) && (e.target === canvasContainer || e.target === svgLayer || e.target === container || e.target.id === 'artboard-guide')) {
         e.stopPropagation();
 
         isSelecting = true;
 
-        // ★修正ポイント：ここも scale で割って「ワールド座標」にするの！
         selectionStart = {
             x: (e.clientX - viewport.x) / viewport.scale,
             y: (e.clientY - viewport.y) / viewport.scale
         };
 
-        // ボックス要素を作成
         selectionBoxEl = document.createElement('div');
         selectionBoxEl.className = 'selection-box';
         container.appendChild(selectionBoxEl);
